@@ -1,0 +1,36 @@
+{
+  "name": "typesense-zen-cart",
+  "version": "1.0.0",
+  "description": "Typesense integration for Zen Cart (Add-on for Instant Search plugin)",
+  "scripts": {
+    "build-typesense_dashboard-dev": "npx webpack --config-name typesense_dashboard --mode=development",
+    "build-typesense_dashboard": "npx webpack --config-name typesense_dashboard --mode=production"
+  },
+  "author": "marco-pm",
+  "license": "GPL-2.0-or-later",
+  "repository": {
+    "url": "https://github.com/marco-pm/zencart_typesense"
+  },
+  "devDependencies": {
+    "@chakra-ui/react": "^2.4.9",
+    "@emotion/react": "^11.10.5",
+    "@emotion/styled": "^11.10.5",
+    "@tanstack/react-query": "^4.22.4",
+    "@types/react": "^18.0.27",
+    "@types/react-dom": "^18.0.10",
+    "@typescript-eslint/eslint-plugin": "^5.49.0",
+    "@typescript-eslint/parser": "^5.49.0",
+    "eslint": "^8.33.0",
+    "framer-motion": "^8.5.0",
+    "html-dom-parser": "^3.1.3",
+    "html-react-parser": "^3.0.8",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^4.7.1",
+    "ts-loader": "^9.4.2",
+    "typescript": "^4.9.4",
+    "typesense": "^1.5.0",
+    "webpack": "^5.75.0",
+    "webpack-cli": "^5.0.1"
+  }
+}
