@@ -20,6 +20,7 @@ use Typesense\Client;
 use Typesense\Exceptions\ConfigError;
 use Typesense\Exceptions\ObjectNotFound;
 use Typesense\Exceptions\TypesenseClientError;
+use Zencart\Plugins\Catalog\InstantSearch\InstantSearchLogger;
 
 class TypesenseZencart
 {
@@ -60,6 +61,16 @@ class TypesenseZencart
     protected queryFactoryResult $currencies;
 
     /**
+     * @var bool
+     */
+    protected bool $writeSyncLog = false;
+
+    /**
+     * @var InstantSearchLogger
+     */
+    protected InstantSearchLogger $logger;
+
+    /**
      * Constructor.
      *
      * @throws ConfigError
@@ -70,12 +81,12 @@ class TypesenseZencart
 
         $this->client = new Client(
             [
-                'api_key' => INSTANT_SEARCH_TYPESENSE_KEY,
+                'api_key' => TYPESENSE_KEY,
                 'nodes' => [
                     [
-                        'host'     => INSTANT_SEARCH_TYPESENSE_HOST,
-                        'port'     => INSTANT_SEARCH_TYPESENSE_PORT,
-                        'protocol' => INSTANT_SEARCH_TYPESENSE_PROTOCOL,
+                        'host'     => TYPESENSE_HOST,
+                        'port'     => TYPESENSE_PORT,
+                        'protocol' => TYPESENSE_PROTOCOL,
                     ],
                 ],
                 'client' => new HttplugClient(),
@@ -84,7 +95,12 @@ class TypesenseZencart
 
         $this->languages = $db->Execute("SELECT languages_id, code FROM " . TABLE_LANGUAGES);
 
-        $this->currencies= $db->Execute("SELECT currencies_id, code FROM " . TABLE_CURRENCIES);
+        $this->currencies = $db->Execute("SELECT currencies_id, code FROM " . TABLE_CURRENCIES);
+
+        if (defined('TYPESENSE_ENABLE_SYNC_LOG') && TYPESENSE_ENABLE_SYNC_LOG === 'true') {
+            $this->writeSyncLog = true;
+            $this->logger = new InstantSearchLogger('typesense-sync');
+        }
     }
 
     /**
@@ -105,20 +121,38 @@ class TypesenseZencart
      */
     public function syncFull(): void
     {
+        $this->writeSyncLog('-------------------------------------------');
+        $this->writeSyncLog('Starting Full-sync of Typesense collections');
+        $this->writeSyncLog('-------------------------------------------');
+
         $productsCollectionName = self::PRODUCTS_COLLECTION_NAME . '_' . time();
+        $this->writeSyncLog('Creating products collection ' . $productsCollectionName);
         $this->createProductsCollection($productsCollectionName);
+        $this->writeSyncLog('Begin indexing products collection ' . $productsCollectionName);
         $this->indexFullProductsCollection($productsCollectionName);
-        $this->updateCollectionAlias(self::PRODUCTS_COLLECTION_NAME, $productsCollectionName);
+        $this->writeSyncLog('End indexing products collection ' . $productsCollectionName);
+        $this->writeSyncLog('Updating products alias ' . $productsCollectionName);
+        $this->updateAlias(self::PRODUCTS_COLLECTION_NAME, $productsCollectionName);
 
         $categoriesCollectionName = self::CATEGORIES_COLLECTION_NAME . '_' . time();
+        $this->writeSyncLog('Creating categories collection ' . $categoriesCollectionName);
         $this->createCategoriesCollection($categoriesCollectionName);
+        $this->writeSyncLog('Indexing categories collection ' . $categoriesCollectionName);
         $this->indexFullCategoriesCollection($categoriesCollectionName);
-        $this->updateCollectionAlias(self::CATEGORIES_COLLECTION_NAME, $categoriesCollectionName);
+        $this->writeSyncLog('Updating categories alias ' . $categoriesCollectionName);
+        $this->updateAlias(self::CATEGORIES_COLLECTION_NAME, $categoriesCollectionName);
 
         $brandsCollectionName = self::BRANDS_COLLECTION_NAME . '_' . time();
+        $this->writeSyncLog('Creating brands collection ' . $brandsCollectionName);
         $this->createBrandsCollection($brandsCollectionName);
+        $this->writeSyncLog('Indexing brands collection ' . $brandsCollectionName);
         $this->indexFullBrandsCollection($brandsCollectionName);
-        $this->updateCollectionAlias(self::BRANDS_COLLECTION_NAME, $brandsCollectionName);
+        $this->writeSyncLog('Updating brands alias ' . $brandsCollectionName);
+        $this->updateAlias(self::BRANDS_COLLECTION_NAME, $brandsCollectionName);
+
+        $this->writeSyncLog('----------------------------------');
+        $this->writeSyncLog('Full-sync of collections completed');
+        $this->writeSyncLog('----------------------------------');
     }
 
     public function syncChanges(): void
@@ -127,23 +161,24 @@ class TypesenseZencart
     }
 
     /**
-     * Creates/updates the collection alias and drops the old collection.
+     * Creates/updates the collection alias and drops the old collection(s).
      *
      * @param string $aliasName
      * @param string $newCollectionName
      * @return void
      * @throws HttpClientException|TypesenseClientError
      */
-    protected function updateCollectionAlias(string $aliasName, string $newCollectionName): void
+    protected function updateAlias(string $aliasName, string $newCollectionName): void
     {
-        try {
-            $currentCollectionName = $this->client->aliases[$aliasName]->retrieve();
-        } catch (ObjectNotFound $e) {
-            // do nothing (first sync)
-        }
         $this->client->aliases->upsert($aliasName, ['collection_name' => $newCollectionName]);
-        if (isset($currentCollectionName['collection_name'])) {
-            $this->client->collections[$currentCollectionName['collection_name']]->delete();
+
+        $collections = $this->client->collections->retrieve();
+        foreach ($collections as $collection) {
+            // If the collection's name begins with the alias name, it's an old collection that needs to be dropped
+            // (this way we also drop "unfinished" collections created during aborted syncs)
+            if (strpos($collection['name'], $aliasName) === 0 && $collection['name'] !== $newCollectionName) {
+                $this->client->collections[$collection['name']]->delete();
+            }
         }
     }
 
@@ -156,8 +191,6 @@ class TypesenseZencart
     protected function indexFullProductsCollection(string $productsCollectionName): void
     {
         global $db, $currencies;
-
-        $productsToImport = [];
 
         $sql = "
             SELECT
@@ -178,6 +211,8 @@ class TypesenseZencart
         ";
         $products = $db->Execute($sql);
 
+        $productsToImport = [];
+        $i = 1;
         foreach ($products as $product) {
             $productData = [
                 'id'           => (string)$product['products_id'],
@@ -224,9 +259,17 @@ class TypesenseZencart
             $_SESSION['currency'] = $baseCurrency;
 
             $productsToImport[] = $productData;
-        }
 
-        $this->client->collections[$productsCollectionName]->documents->import($productsToImport, ['action' => 'create']);
+            // Index the products in batches of 100
+            if ($i % 100 === 0 || $i === count($products)) {
+                $startIndex = ($i === count($products)) ? ($i - ($i % 100) + 1) : $i - 99;
+                $this->writeSyncLog("Indexing products $startIndex to $i (of " . count($products) . ")");
+                $this->client->collections[$productsCollectionName]->documents->import($productsToImport, ['action' => 'create']);
+                $productsToImport = [];
+            }
+
+            $i++;
+        }
     }
 
     /**
@@ -591,7 +634,7 @@ class TypesenseZencart
                 pd.products_id = :products_id
                 AND pd.language_id = :languages_id
             GROUP BY
-                pd.products_id
+                pd.products_id, pd.products_name, pd.products_description, mtpd.metatags_keywords
         ";
 
         $sql = $db->bindVars($sql, ':products_id', $productId, 'integer');
@@ -600,4 +643,15 @@ class TypesenseZencart
         return $db->Execute($sql);
     }
 
+    /**
+     * Writes a message to the sync log, if enabled.
+     * @param string $message
+     * @return void
+     */
+    protected function writeSyncLog(string $message): void
+    {
+        if ($this->writeSyncLog) {
+            $this->logger->writeDebugLog($message);
+        }
+    }
 }

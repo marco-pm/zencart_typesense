@@ -2,7 +2,7 @@
 
 return [
     'pluginVersion'     => 'v1.0.0',
-    'pluginName'        => 'Typesense',
+    'pluginName'        => 'Typesense (Instant Search add-on)',
     'pluginDescription' => 'Typesense integration (Add-on for Instant Search plugin)',
     'pluginAuthor'      => 'marcopm',
     'pluginId'          => 0,

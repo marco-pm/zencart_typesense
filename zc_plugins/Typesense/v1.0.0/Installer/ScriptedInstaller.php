@@ -55,7 +55,7 @@ class ScriptedInstaller extends ScriptedInstallBase
         // TODO
 
         $sql = "DELETE FROM " . TABLE_CONFIGURATION . "
-                WHERE configuration_key LIKE 'INSTANT_SEARCH_TYPESENSE_%'
+                WHERE configuration_key LIKE 'TYPESENSE_%'
                 OR configuration_key = 'INSTANT_SEARCH_ENGINE'";
         $this->executeInstallerSql($sql);
 
@@ -75,10 +75,13 @@ class ScriptedInstaller extends ScriptedInstallBase
                 (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, date_added, sort_order, use_function, set_function, val_function)
             VALUES
                 ('Search Engine', 'INSTANT_SEARCH_ENGINE', 'MySQL', 'TODO', $configurationGroupId, now(), 0, NULL, 'zen_cfg_select_option(array(\'MySQL\', \'Typesense\'),', NULL),
-                ('[Typesense] Host', 'INSTANT_SEARCH_TYPESENSE_HOST', 'typesense', 'Typesense Host', $configurationGroupId, now(), 5000, NULL, NULL, NULL),
-                ('[Typesense] Port', 'INSTANT_SEARCH_TYPESENSE_PORT', '8108', 'Typesense Port', $configurationGroupId, now(), 5100, NULL, NULL, '{\"error\":\"TEXT_INSTANT_SEARCH_CONFIGURATION_INT_VALIDATE\",\"id\":\"FILTER_VALIDATE_INT\",\"options\":{\"options\":{\"min_range\":0}}}'),
-                ('[Typesense] Protocol', 'INSTANT_SEARCH_TYPESENSE_PROTOCOL', 'http', 'Typesense Protocol', $configurationGroupId, now(), 5200, NULL, 'zen_cfg_select_option(array(\'http\', \'https\'),', NULL),
-                ('[Typesense] Key', 'INSTANT_SEARCH_TYPESENSE_KEY', 'Ffuz6GfmAkDsNzKexGRf2tni4wivhTMq', 'Typesense Key', $configurationGroupId, now(), 5300, NULL, NULL, '{\"error\":\"ERROR\",\"id\":\"FILTER_SANITIZE_URL\",\"options\":{\"options\":{}}}')
+                ('[Typesense] Host', 'TYPESENSE_HOST', 'typesense', 'Typesense Host', $configurationGroupId, now(), 5000, NULL, NULL, NULL),
+                ('[Typesense] Port', 'TYPESENSE_PORT', '8108', 'Typesense Port', $configurationGroupId, now(), 5100, NULL, NULL, '{\"error\":\"TEXT_INSTANT_SEARCH_CONFIGURATION_INT_VALIDATE\",\"id\":\"FILTER_VALIDATE_INT\",\"options\":{\"options\":{\"min_range\":0}}}'),
+                ('[Typesense] Protocol', 'TYPESENSE_PROTOCOL', 'http', 'Typesense Protocol', $configurationGroupId, now(), 5200, NULL, 'zen_cfg_select_option(array(\'http\', \'https\'),', NULL),
+                ('[Typesense] Key', 'TYPESENSE_KEY', 'xyz', 'Typesense Key', $configurationGroupId, now(), 5300, NULL, NULL, '{\"error\":\"ERROR\",\"id\":\"FILTER_SANITIZE_URL\",\"options\":{\"options\":{}}}'),
+                ('[Typesense] Full-Sync Collections every (hours)', 'TYPESENSE_FULL_SYNC_FREQUENCY_HOURS', '12', 'TODO', $configurationGroupId, now(), 5400, NULL, NULL, '{\"error\":\"TEXT_INSTANT_SEARCH_CONFIGURATION_INT_VALIDATE\",\"id\":\"FILTER_VALIDATE_INT\",\"options\":{\"options\":{\"min_range\":1}}}'),
+                ('[Typesense] Full-Sync Collections after a Category or Manufacturer Change', 'TYPESENSE_FULL_SYNC_AFTER_CATEGORY_BRAND_CHANGE', 'true', 'TODO', $configurationGroupId, now(), 5500, NULL, 'zen_cfg_select_option(array(\'http\', \'https\'),', NULL),
+                ('[Typesense] Enable Sync Log', 'TYPESENSE_ENABLE_SYNC_LOG', 'false', 'TODO', $configurationGroupId, now(), 5600, NULL, 'zen_cfg_select_option(array(\'true\', \'false\'),', NULL)
         ";
         $this->executeInstallerSql($sql);
     }
