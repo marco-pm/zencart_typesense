@@ -90,27 +90,33 @@ class TypesenseSearchEngineProvider extends \base implements SearchEngineProvide
         $languageCode = $db->Execute($sql)->fields['code'];
 
         $productsSearch = [
-            'query_by'   => '',
-            'prefix'     => '',
-            'infix'      => '',
-            'sort_by'    => "_text_match:desc,views_$languageCode:desc,sort-order:asc",
-            'per_page'   => $productsLimit
+            'query_by'              => '',
+            'prefix'                => '',
+            'infix'                 => '',
+            'sort_by'               => "_text_match:desc,views_$languageCode:desc,sort-order:asc",
+            'per_page'              => $productsLimit,
+            'drop_tokens_threshold' => $productsLimit,
+            'typo_tokens_threshold' => $productsLimit,
         ];
 
         $categoriesSearch = [
-            'query_by'   => "name_$languageCode",
-            'prefix'     => 'true',
-            'infix'      => 'fallback',
-            'sort_by'    => "_text_match:desc,name_$languageCode:asc",
-            'per_page'   => $categoriesLimit
+            'query_by'              => "name_$languageCode",
+            'prefix'                => 'true',
+            'infix'                 => 'fallback',
+            'sort_by'               => "_text_match:desc,name_$languageCode:asc",
+            'per_page'              => $categoriesLimit,
+            'drop_tokens_threshold' => $categoriesLimit,
+            'typo_tokens_threshold' => $categoriesLimit,
         ];
 
         $brandsSearch = [
-            'query_by'   => "name",
-            'prefix'     => 'true',
-            'infix'      => 'fallback',
-            'sort_by'    => "_text_match:desc,name:asc",
-            'per_page'   => $manufacturersLimit
+            'query_by'              => "name",
+            'prefix'                => 'true',
+            'infix'                 => 'fallback',
+            'sort_by'               => "_text_match:desc,name:asc",
+            'per_page'              => $manufacturersLimit,
+            'drop_tokens_threshold' => $manufacturersLimit,
+            'typo_tokens_threshold' => $manufacturersLimit,
         ];
 
         foreach ($productFieldsList as $productField) {
