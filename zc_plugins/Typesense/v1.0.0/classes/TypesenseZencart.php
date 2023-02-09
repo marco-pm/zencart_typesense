@@ -98,8 +98,8 @@ class TypesenseZencart
         $this->currencies = $db->Execute("SELECT currencies_id, code FROM " . TABLE_CURRENCIES);
 
         if (defined('TYPESENSE_ENABLE_SYNC_LOG') && TYPESENSE_ENABLE_SYNC_LOG === 'true') {
-            $this->writeSyncLog = true;
             $this->logger = new InstantSearchLogger('typesense-sync');
+            $this->writeSyncLog = true;
         }
     }
 
@@ -112,6 +112,120 @@ class TypesenseZencart
     }
 
     /**
+     * Run the sync process, if it's not already running and other conditions are met.
+     * Run a full-sync if one of the following conditions is true (otherwise, run a changes-sync):
+     * - the "is_next_run_full" db field is set to 1 (the store owner requested a full-sync through the admin interface,
+     *   or there have been changes to categories, brands, languages or currencies)
+     * - the last full-sync completed more than TYPESENSE_FULL_SYNC_FREQUENCY_HOURS hours ago, or has never been launched
+     *
+     * @return void
+     * @throws HttpClientException|TypesenseClientError|\JsonException
+     */
+    public function runSync(): void
+    {
+        global $db;
+
+        $sql = "
+            SELECT
+                status,
+                start_time,
+                is_next_run_full,
+                last_full_sync_end_time,
+                TIMESTAMPDIFF(MINUTE, start_time, NOW()) AS minutes_since_last_start,
+                TIMESTAMPDIFF(HOUR, last_full_sync_end_time, NOW()) AS hours_since_last_full_sync
+            FROM
+                " . TABLE_TYPESENSE_SYNC . "
+            LIMIT 1
+        ";
+        $result = $db->Execute($sql);
+
+        if ($result->fields['status'] === 'running') {
+            if (
+                $result->fields['minutes_since_last_start'] === null ||
+                $result->fields['minutes_since_last_start'] > TYPESENSE_SYNC_TIMEOUT_MINUTES
+            ) {
+                $this->writeSyncLog('Last sync is still running, but has been running for more than ' . TYPESENSE_SYNC_TIMEOUT_MINUTES . ' minutes. Aborting.');
+                $sql = "
+                    UPDATE
+                        " . TABLE_TYPESENSE_SYNC . "
+                    SET
+                        status = 'failed'
+                ";
+                $db->Execute($sql);
+                $result->fields['status'] = 'failed';
+            } else {
+                $this->writeSyncLog('Last sync is still running. Exiting.');
+                return;
+            }
+        }
+
+        if ($result->fields['status'] === 'failed' && TYPESENSE_SYNC_AFTER_FAILED === 'false') {
+            $this->writeSyncLog('Last sync has failed, and sync-after-failed is disabled. Exiting.');
+            return;
+        }
+
+        if (
+            $result->fields['is_next_run_full'] === '1' ||
+            $result->fields['last_full_sync_end_time'] === null ||
+            $result->fields['hours_since_last_full_sync'] === null ||
+            $result->fields['hours_since_last_full_sync'] >= TYPESENSE_FULL_SYNC_FREQUENCY_HOURS
+        ) {
+            $this->syncFull();
+
+            if ($result->fields['is_next_run_full'] === '1') {
+                $sql = "
+                    UPDATE
+                        " . TABLE_TYPESENSE_SYNC . "
+                    SET
+                        is_next_run_full = 0
+                ";
+                $db->Execute($sql);
+            }
+
+            return;
+        }
+
+        $this->syncIncremental();
+    }
+
+    /**
+     * Sets the next sync to be a full-sync.
+     *
+     * @return void
+     */
+    public function setFullSyncGraceful(): void
+    {
+        global $db;
+
+        $sql = "
+            UPDATE
+                " . TABLE_TYPESENSE_SYNC . "
+            SET
+                is_next_run_full = 1
+        ";
+        $db->Execute($sql);
+    }
+
+    /**
+     * Ignores the last sync status and forces the full-sync to run on the next cron run.
+     *
+     * @return void
+     */
+    public function setFullSyncForced(): void
+    {
+        global $db;
+
+        $sql = "
+            UPDATE
+                " . TABLE_TYPESENSE_SYNC . "
+            SET
+                status = 'completed',
+                is_next_run_full = 1
+        ";
+        $db->Execute($sql);
+    }
+
+    /**
      * Recreates the collections, indexes the documents and updates the aliases.
      * This is a full re-index that should run only once a day, or immediately after changes that require the
      * re-creation of the collection(s).
@@ -119,45 +233,130 @@ class TypesenseZencart
      * @return void
      * @throws HttpClientException|TypesenseClientError|\JsonException
      */
-    public function syncFull(): void
+    protected function syncFull(): void
     {
-        $this->writeSyncLog('-------------------------------------------');
-        $this->writeSyncLog('Starting Full-sync of Typesense collections');
-        $this->writeSyncLog('-------------------------------------------');
+        global $db;
 
-        $productsCollectionName = self::PRODUCTS_COLLECTION_NAME . '_' . time();
-        $this->writeSyncLog('Creating products collection ' . $productsCollectionName);
-        $this->createProductsCollection($productsCollectionName);
-        $this->writeSyncLog('Begin indexing products collection ' . $productsCollectionName);
-        $this->indexFullProductsCollection($productsCollectionName);
-        $this->writeSyncLog('End indexing products collection ' . $productsCollectionName);
-        $this->writeSyncLog('Updating products alias ' . $productsCollectionName);
-        $this->updateAlias(self::PRODUCTS_COLLECTION_NAME, $productsCollectionName);
+        $this->writeSyncLog('--- Starting full-sync of Typesense collections ---');
 
-        $categoriesCollectionName = self::CATEGORIES_COLLECTION_NAME . '_' . time();
-        $this->writeSyncLog('Creating categories collection ' . $categoriesCollectionName);
-        $this->createCategoriesCollection($categoriesCollectionName);
-        $this->writeSyncLog('Indexing categories collection ' . $categoriesCollectionName);
-        $this->indexFullCategoriesCollection($categoriesCollectionName);
-        $this->writeSyncLog('Updating categories alias ' . $categoriesCollectionName);
-        $this->updateAlias(self::CATEGORIES_COLLECTION_NAME, $categoriesCollectionName);
+        $sql = "
+            UPDATE
+                " . TABLE_TYPESENSE_SYNC . "
+            SET
+                start_time = NOW(),
+                status = 'running'
+        ";
+        $db->Execute($sql);
 
-        $brandsCollectionName = self::BRANDS_COLLECTION_NAME . '_' . time();
-        $this->writeSyncLog('Creating brands collection ' . $brandsCollectionName);
-        $this->createBrandsCollection($brandsCollectionName);
-        $this->writeSyncLog('Indexing brands collection ' . $brandsCollectionName);
-        $this->indexFullBrandsCollection($brandsCollectionName);
-        $this->writeSyncLog('Updating brands alias ' . $brandsCollectionName);
-        $this->updateAlias(self::BRANDS_COLLECTION_NAME, $brandsCollectionName);
+        try {
+            $productsCollectionName = self::PRODUCTS_COLLECTION_NAME . '_' . time();
+            $this->writeSyncLog('Creating products collection ' . $productsCollectionName);
+            $this->createProductsCollection($productsCollectionName);
+            $this->writeSyncLog('Begin indexing products collection ' . $productsCollectionName);
+            $this->indexProductsCollection($productsCollectionName, true);
+            $this->writeSyncLog('End indexing products collection ' . $productsCollectionName);
+            $this->writeSyncLog('Updating products alias ' . $productsCollectionName);
+            $this->updateAlias(self::PRODUCTS_COLLECTION_NAME, $productsCollectionName);
 
-        $this->writeSyncLog('----------------------------------');
-        $this->writeSyncLog('Full-sync of collections completed');
-        $this->writeSyncLog('----------------------------------');
+            $categoriesCollectionName = self::CATEGORIES_COLLECTION_NAME . '_' . time();
+            $this->writeSyncLog('Creating categories collection ' . $categoriesCollectionName);
+            $this->createCategoriesCollection($categoriesCollectionName);
+            $this->writeSyncLog('Indexing categories collection ' . $categoriesCollectionName);
+            $this->indexFullCategoriesCollection($categoriesCollectionName);
+            $this->writeSyncLog('Updating categories alias ' . $categoriesCollectionName);
+            $this->updateAlias(self::CATEGORIES_COLLECTION_NAME, $categoriesCollectionName);
+
+            $brandsCollectionName = self::BRANDS_COLLECTION_NAME . '_' . time();
+            $this->writeSyncLog('Creating brands collection ' . $brandsCollectionName);
+            $this->createBrandsCollection($brandsCollectionName);
+            $this->writeSyncLog('Indexing brands collection ' . $brandsCollectionName);
+            $this->indexFullBrandsCollection($brandsCollectionName);
+            $this->writeSyncLog('Updating brands alias ' . $brandsCollectionName);
+            $this->updateAlias(self::BRANDS_COLLECTION_NAME, $brandsCollectionName);
+        } catch (\Exception $e) {
+            $this->writeSyncLog('ERROR: ' . $e->getMessage());
+            $this->writeSyncLog('--- Full-sync failed ---');
+
+            $sql = "
+                UPDATE
+                    " . TABLE_TYPESENSE_SYNC . "
+                SET
+                    status = 'failed'
+            ";
+            $db->Execute($sql);
+
+            throw $e;
+        }
+
+        $sql = "
+            UPDATE
+                " . TABLE_TYPESENSE_SYNC . "
+            SET
+                end_time = NOW(),
+                last_full_sync_end_time = NOW(),
+                status = 'completed'
+        ";
+        $db->Execute($sql);
+
+        $this->writeSyncLog('--- Full-sync completed ---');
     }
 
-    public function syncChanges(): void
+    /**
+     * Re-indexes the product documents that have been updated since the last sync.
+     *
+     * @return void
+     * @throws HttpClientException|TypesenseClientError|\JsonException
+     */
+    protected function syncIncremental(): void
     {
+        global $db;
 
+        $this->writeSyncLog('--- Starting changes-sync of Typesense products collection ---');
+
+        $sql = "
+            UPDATE
+                " . TABLE_TYPESENSE_SYNC . "
+            SET
+                start_time = NOW(),
+                status = 'running'
+        ";
+        $db->Execute($sql);
+
+        try {
+            $productsCollectionName = $this->client->aliases[self::PRODUCTS_COLLECTION_NAME]->retrieve();
+        } catch (ObjectNotFound $e) {
+            $this->writeSyncLog('ERROR: alias ' . self::PRODUCTS_COLLECTION_NAME . ' not found. Run a full-sync to create it. Exiting...');
+            $this->writeSyncLog('--- Changes-sync failed ---');
+            return;
+        }
+
+        try {
+            $this->indexProductsCollection($productsCollectionName['collection_name']);
+        } catch (\Exception $e) {
+            $this->writeSyncLog('ERROR: ' . $e->getMessage());
+            $this->writeSyncLog('--- Changes-sync failed ---');
+
+            $sql = "
+                UPDATE
+                    " . TABLE_TYPESENSE_SYNC . "
+                SET
+                    status = 'failed'
+            ";
+            $db->Execute($sql);
+
+            throw $e;
+        }
+
+        $sql = "
+            UPDATE
+                " . TABLE_TYPESENSE_SYNC . "
+            SET
+                end_time = NOW(),
+                status = 'completed'
+        ";
+        $db->Execute($sql);
+
+        $this->writeSyncLog('--- Changes-sync completed ---');
     }
 
     /**
@@ -175,7 +374,7 @@ class TypesenseZencart
         $collections = $this->client->collections->retrieve();
         foreach ($collections as $collection) {
             // If the collection's name begins with the alias name, it's an old collection that needs to be dropped
-            // (this way we also drop "unfinished" collections created during aborted syncs)
+            // (this way we also drop "unfinished" collections created during failed syncs)
             if (strpos($collection['name'], $aliasName) === 0 && $collection['name'] !== $newCollectionName) {
                 $this->client->collections[$collection['name']]->delete();
             }
@@ -183,12 +382,14 @@ class TypesenseZencart
     }
 
     /**
-     * Full-indexes the product documents.
+     * Indexes the product documents.
+     * If $fullSync is false, only the products that have been updated since the last sync are indexed.
      *
      * @param string $productsCollectionName
+     * @param bool $fullSync
      * @throws TypesenseClientError|HttpClientException|\JsonException
      */
-    protected function indexFullProductsCollection(string $productsCollectionName): void
+    protected function indexProductsCollection(string $productsCollectionName, bool $fullSync = false): void
     {
         global $db, $currencies;
 
@@ -207,68 +408,95 @@ class TypesenseZencart
                 " . TABLE_PRODUCTS . " p
                 LEFT JOIN " . TABLE_MANUFACTURERS . " m ON (m.manufacturers_id = p.manufacturers_id)
             WHERE
-                p.products_status <> 0
-        ";
+                p.products_status <> 0" .
+                ($fullSync ? '' : "
+                AND p.products_last_modified >= (SELECT start_time FROM " . TABLE_TYPESENSE_SYNC . ")"
+                )
+        ;
         $products = $db->Execute($sql);
 
-        $productsToImport = [];
-        $i = 1;
-        foreach ($products as $product) {
-            $productData = [
-                'id'           => (string)$product['products_id'],
-                'model'        => $product['products_model'],
-                'price'        => (float)$product['products_price_sorter'],
-                'quantity'     => (float)$product['products_quantity'],
-                'weight'       => (float)$product['products_weight'],
-                'image'        => $product['products_image'] ?? '',
-                'sort-order'   => (int)$product['products_sort_order'],
-                'manufacturer' => $product['manufacturers_name'] ?? '',
-            ];
+        if ($products->RecordCount() === 0) {
+            $this->writeSyncLog($fullSync ? 'No products to index' : 'No products to update');
+        } else {
+            $productsToIndex = [];
+            $i = 1;
+            foreach ($products as $product) {
+                $productData = [
+                    'id' => (string)$product['products_id'],
+                    'model' => $product['products_model'],
+                    'price' => (float)$product['products_price_sorter'],
+                    'quantity' => (float)$product['products_quantity'],
+                    'weight' => (float)$product['products_weight'],
+                    'image' => $product['products_image'] ?? '',
+                    'sort-order' => (int)$product['products_sort_order'],
+                    'manufacturer' => $product['manufacturers_name'] ?? '',
+                ];
 
-            $productData['rating'] = $this->getProductRating((int)$product['products_id']);
+                $productData['rating'] = $this->getProductRating((int)$product['products_id']);
 
-            foreach ($this->languages as $language) {
-                $productAdditionalData = $this->getProductAdditionalData((int)$product['products_id'], (int)$language['languages_id']);
+                foreach ($this->languages as $language) {
+                    $productAdditionalData = $this->getProductAdditionalData((int)$product['products_id'], (int)$language['languages_id']);
 
-                if ($productAdditionalData->RecordCount() > 0) {
-                    $productLanguageData = [
-                        'name_' . $language['code']          => $productAdditionalData->fields['products_name'],
-                        'description_' . $language['code']   => $productAdditionalData->fields['products_description'],
-                        'meta-keywords_' . $language['code'] => $productAdditionalData->fields['metatags_keywords'] ?? '',
-                        'views_' . $language['code']         => (int)$productAdditionalData->fields['total_views'],
-                    ];
+                    if ($productAdditionalData->RecordCount() > 0) {
+                        $productLanguageData = [
+                            'name_' . $language['code'] => $productAdditionalData->fields['products_name'],
+                            'description_' . $language['code'] => $productAdditionalData->fields['products_description'],
+                            'meta-keywords_' . $language['code'] => $productAdditionalData->fields['metatags_keywords'] ?? '',
+                            'views_' . $language['code'] => (int)$productAdditionalData->fields['total_views'],
+                        ];
 
-                    $productData = array_merge($productData, $productLanguageData);
+                        $productData = array_merge($productData, $productLanguageData);
+                    }
+
+                    // Get the parent categories names
+                    $parentCategories = $this->getParentCategories((int)$product['master_categories_id'], (int)$language['languages_id']);
+                    $parentCategoriesNames = [];
+                    foreach ($parentCategories as $parentCategory) {
+                        $parentCategoriesNames[] = $parentCategory['categories_name'];
+                    }
+                    $parentCategoriesNames = implode(' ', array_reverse($parentCategoriesNames));
+                    $productData['category_' . $language['code']] = $parentCategoriesNames ?? '';
                 }
 
-                // Get the parent categories names
-                $parentCategories = $this->getParentCategories((int)$product['master_categories_id'], (int)$language['languages_id']);
-                $parentCategoriesNames = [];
-                foreach ($parentCategories as $parentCategory) {
-                    $parentCategoriesNames[] = $parentCategory['categories_name'];
+                $baseCurrency = $_SESSION['currency'] ?? DEFAULT_CURRENCY;
+                foreach ($this->currencies as $currency) {
+                    $_SESSION['currency'] = $currency['code'];
+                    $productData['displayed-price_' . $currency['code']] = zen_get_products_display_price($product['products_id']);
                 }
-                $parentCategoriesNames = implode(' ', array_reverse($parentCategoriesNames));
-                $productData['category_' . $language['code']] = $parentCategoriesNames ?? '';
+                $_SESSION['currency'] = $baseCurrency;
+
+                $productsToIndex[] = $productData;
+
+                // Index the products in batches of 100
+                if ($i % 100 === 0 || $i === count($products)) {
+                    $startIndex = ($i === count($products)) ? ($i - ($i % 100) + 1) : $i - 99;
+                    $this->writeSyncLog("Indexing products $startIndex to $i (of " . count($products) . ")");
+                    $this->client->collections[$productsCollectionName]->documents->import($productsToIndex, ['action' => $fullSync ? 'create' : 'upsert']);
+                    $productsToIndex = [];
+                }
+
+                $i++;
             }
+        }
 
-            $baseCurrency = $_SESSION['currency'] ?? DEFAULT_CURRENCY;
-            foreach ($this->currencies as $currency) {
-                $_SESSION['currency'] = $currency['code'];
-                $productData['displayed-price_' . $currency['code']] = zen_get_products_display_price($product['products_id']);
-            }
-            $_SESSION['currency'] = $baseCurrency;
-
-            $productsToImport[] = $productData;
-
-            // Index the products in batches of 100
-            if ($i % 100 === 0 || $i === count($products)) {
-                $startIndex = ($i === count($products)) ? ($i - ($i % 100) + 1) : $i - 99;
-                $this->writeSyncLog("Indexing products $startIndex to $i (of " . count($products) . ")");
-                $this->client->collections[$productsCollectionName]->documents->import($productsToImport, ['action' => 'create']);
-                $productsToImport = [];
-            }
-
-            $i++;
+        if ($fullSync) {
+            // No need to keep track of the products to delete anymore, since we just full-synced the collection
+            $sql = "
+                UPDATE " . TABLE_TYPESENSE_SYNC . "
+                SET products_ids_to_delete = NULL
+            ";
+            $db->Execute($sql);
+        } else {
+/*            $sql = "
+                SELECT products_ids_to_delete
+                FROM " . TABLE_TYPESENSE_SYNC . "
+            ";
+            $productsIdsToDelete = $db->Execute($sql);
+            $productsIdsToDelete = unserialize($productsIdsToDelete->fields['products_ids_to_delete']);
+            if (!empty($productsIdsToDelete)) {
+                $this->writeSyncLog("Deleting products " . implode(', ', $productsIdsToDelete));
+                $this->client->collections[$productsCollectionName]->documents->delete($productsIdsToDelete);
+            }*/
         }
     }
 

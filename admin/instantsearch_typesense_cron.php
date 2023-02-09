@@ -29,25 +29,17 @@ try {
 }
 
 try {
-    $typesense->syncFull();
+    $typesense->runSync();
 } catch (Exception|\Http\Client\Exception $e) {
-    $logger->writeErrorLog("Error during full-syncing of the collections, exiting", $e);
+    $logger->writeErrorLog("Error while syncing the collections, exiting", $e);
     exit();
 }
 
-$client = $typesense->getClient();
+/*$client = $typesense->getClient();
 
 try {
     $suca = $client->collections->retrieve();
 } catch (Exception|\Http\Client\Exception $e) {
     $logger->writeErrorLog("Error while retrieving collections, exiting", $e);
     exit();
-}
-
-$a = 1;
-
-/* $key = $client->keys->create([
-    'description' => 'Admin key.',
-    'actions' => ['*'],
-    'collections' => ['*']
-]);*/
+}*/
