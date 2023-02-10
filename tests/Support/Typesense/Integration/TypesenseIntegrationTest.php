@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-namespace Support\Typesense\Integration;
+namespace Tests\Typesense\Integration;
 
 use Composer\Autoload\ClassLoader;
 use Tests\Support\Traits\DatabaseConcerns;
@@ -34,7 +34,7 @@ class TypesenseIntegrationTest extends zcUnitTestCase
         $classLoader->addPsr4("Zencart\\Plugins\\Catalog\\Typesense\\", "zc_plugins/Typesense/v1.0.0/classes/", true);
         $classLoader->register();
 
-        define('TABLE_TYPESENSE_SYNC', 'typesense_sync_status');
+        //define('TABLE_TYPESENSE_SYNC', 'typesense_sync_status');
 
         define('TYPESENSE_FULL_SYNC_FREQUENCY_HOURS', '12');
         define('TYPESENSE_FULL_SYNC_AFTER_CATEGORY_BRAND_CHANGE', 'true');
@@ -53,7 +53,7 @@ class TypesenseIntegrationTest extends zcUnitTestCase
 
         $this->typesenseSetup();
 
-        $this->setSyncStatus('completed', 'NULL', 'NULL', 0, 'NULL', '');
+        $this->setSyncStatus('completed', 0, 'NULL', 'NULL');
 
         $this->typesenseZencartMock->expects($this->once())
                                    ->method('syncFull');
@@ -70,7 +70,7 @@ class TypesenseIntegrationTest extends zcUnitTestCase
 
         $this->typesenseSetup();
 
-        $this->setSyncStatus('failed', 'NULL', 'NULL', 0, 'NULL', '');
+        $this->setSyncStatus('failed', 0, 'NULL', 'NULL');
 
         $this->typesenseZencartMock->expects($this->never())
                                    ->method('syncFull');
@@ -87,7 +87,7 @@ class TypesenseIntegrationTest extends zcUnitTestCase
 
         $this->typesenseSetup();
 
-        $this->setSyncStatus('failed', 'NULL', 'NULL', 0, 'NULL', '');
+        $this->setSyncStatus('failed', 0, 'NULL', 'NULL');
 
         $this->typesenseZencartMock->expects($this->once())
                                    ->method('syncFull');
@@ -104,7 +104,7 @@ class TypesenseIntegrationTest extends zcUnitTestCase
 
         $this->typesenseSetup();
 
-        $this->setSyncStatus('running', 'DATE_SUB(NOW(), INTERVAL 25 MINUTE)', 'NULL', 0, 'NULL', '');
+        $this->setSyncStatus('running', 0, 'DATE_SUB(NOW(), INTERVAL 25 MINUTE)', 'NULL');
 
         $this->typesenseZencartMock->expects($this->never())
                                    ->method('syncFull');
@@ -121,7 +121,7 @@ class TypesenseIntegrationTest extends zcUnitTestCase
 
         $this->typesenseSetup();
 
-        $this->setSyncStatus('running', 'DATE_SUB(NOW(), INTERVAL 35 MINUTE)', 'NULL', 0, 'NULL', '');
+        $this->setSyncStatus('running', 0, 'DATE_SUB(NOW(), INTERVAL 35 MINUTE)', 'NULL');
 
         $this->typesenseZencartMock->expects($this->once())
                                    ->method('syncFull');
@@ -142,7 +142,7 @@ class TypesenseIntegrationTest extends zcUnitTestCase
 
         $this->typesenseSetup();
 
-        $this->setSyncStatus('running', 'DATE_SUB(NOW(), INTERVAL 35 MINUTE)', 'NULL', 0, 'NULL', '');
+        $this->setSyncStatus('running', 0, 'DATE_SUB(NOW(), INTERVAL 35 MINUTE)', 'NULL');
 
         $this->typesenseZencartMock->expects($this->never())
                                    ->method('syncFull');
@@ -165,11 +165,9 @@ class TypesenseIntegrationTest extends zcUnitTestCase
 
         $this->setSyncStatus(
             'completed',
-            'DATE_SUB(NOW(), INTERVAL 60 MINUTE)',
-            'DATE_SUB(NOW(), INTERVAL 45 MINUTE)',
             1,
-            'DATE_SUB(NOW(), INTERVAL 120 MINUTE)',
-            ''
+            'DATE_SUB(NOW(), INTERVAL 60 MINUTE)',
+            'DATE_SUB(NOW(), INTERVAL 120 MINUTE)'
         );
 
         $this->typesenseZencartMock->expects($this->once())
@@ -189,11 +187,9 @@ class TypesenseIntegrationTest extends zcUnitTestCase
 
         $this->setSyncStatus(
             'completed',
-            'DATE_SUB(NOW(), INTERVAL 60 MINUTE)',
-            'DATE_SUB(NOW(), INTERVAL 45 MINUTE)',
             0,
-            'DATE_SUB(NOW(), INTERVAL 13 HOUR)',
-            ''
+            'DATE_SUB(NOW(), INTERVAL 60 MINUTE)',
+            'DATE_SUB(NOW(), INTERVAL 13 HOUR)'
         );
 
         $this->typesenseZencartMock->expects($this->once())
@@ -213,11 +209,9 @@ class TypesenseIntegrationTest extends zcUnitTestCase
 
         $this->setSyncStatus(
             'completed',
-            'DATE_SUB(NOW(), INTERVAL 60 MINUTE)',
-            'DATE_SUB(NOW(), INTERVAL 45 MINUTE)',
             0,
-            'DATE_SUB(NOW(), INTERVAL 120 MINUTE)',
-            ''
+            'DATE_SUB(NOW(), INTERVAL 60 MINUTE)',
+            'DATE_SUB(NOW(), INTERVAL 120 MINUTE)'
         );
 
         $this->typesenseZencartMock->expects($this->never())
@@ -237,11 +231,9 @@ class TypesenseIntegrationTest extends zcUnitTestCase
 
         $this->setSyncStatus(
             'completed',
-            'DATE_SUB(NOW(), INTERVAL 60 MINUTE)',
-            'DATE_SUB(NOW(), INTERVAL 45 MINUTE)',
             0,
-            'DATE_SUB(NOW(), INTERVAL 11 HOUR)',
-            ''
+            'DATE_SUB(NOW(), INTERVAL 60 MINUTE)',
+            'DATE_SUB(NOW(), INTERVAL 11 HOUR)'
         );
 
         $this->typesenseZencartMock->expects($this->never())
@@ -255,11 +247,9 @@ class TypesenseIntegrationTest extends zcUnitTestCase
 
     private function setSyncStatus(
         string $status,
-        string|null $startTime,
-        string|null $endTime,
         int $isNextRunFull,
-        string|null $lastFullSyncEndTime,
-        string $productsIdsToDelete
+        string|null $startTime,
+        string|null $lastFullSyncEndTime
     ): void {
         $sql = "
             UPDATE
@@ -267,10 +257,8 @@ class TypesenseIntegrationTest extends zcUnitTestCase
             SET
                 status = '" . $status . "',
                 start_time = " . $startTime . ",
-                end_time = " . $endTime . ",
                 is_next_run_full = " . $isNextRunFull . ",
-                last_full_sync_end_time = " . $lastFullSyncEndTime . ",
-                products_ids_to_delete = '" . $productsIdsToDelete . "'
+                last_full_sync_end_time = " . $lastFullSyncEndTime . "
             WHERE
                 id = 1
         ";
@@ -283,10 +271,8 @@ class TypesenseIntegrationTest extends zcUnitTestCase
             SELECT
                 status,
                 start_time,
-                end_time,
                 is_next_run_full,
-                last_full_sync_end_time,
-                products_ids_to_delete
+                last_full_sync_end_time
             FROM
                 typesense_sync_status
             WHERE

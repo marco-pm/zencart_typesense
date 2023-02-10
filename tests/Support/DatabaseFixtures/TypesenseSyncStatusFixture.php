@@ -1,9 +1,6 @@
 <?php
 
-namespace Support\DatabaseFixtures;
-
-use Tests\Support\DatabaseFixtures\DatabaseFixture;
-use Tests\Support\DatabaseFixtures\FixtureContract;
+namespace Tests\Support\DatabaseFixtures;
 
 class TypesenseSyncStatusFixture extends DatabaseFixture implements FixtureContract
 {
@@ -14,13 +11,11 @@ class TypesenseSyncStatusFixture extends DatabaseFixture implements FixtureContr
             CREATE TABLE typesense_sync_status (
                 id int NOT NULL DEFAULT '1',
                 status varchar(20) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'completed',
-                start_time datetime DEFAULT NULL,
-                end_time datetime DEFAULT NULL,
                 is_next_run_full tinyint(1) NOT NULL DEFAULT '0',
+                start_time datetime DEFAULT NULL,
                 last_full_sync_end_time datetime DEFAULT NULL,
-                products_ids_to_delete text,
                 PRIMARY KEY (id)
-            ) ENGINE=InnoDB;
+            ) ENGINE=MyISAM;
         ";
 
         $this->connection->query($sql);

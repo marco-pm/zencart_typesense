@@ -21,6 +21,7 @@ use Typesense\Exceptions\ConfigError;
 use Typesense\Exceptions\ObjectNotFound;
 use Typesense\Exceptions\TypesenseClientError;
 use Zencart\Plugins\Catalog\InstantSearch\InstantSearchLogger;
+use Zencart\Plugins\Catalog\Typesense\Exceptions\TypesenseIndexProductsException;
 
 class TypesenseZencart
 {
@@ -113,13 +114,13 @@ class TypesenseZencart
 
     /**
      * Run the sync process, if it's not already running and other conditions are met.
-     * Run a full-sync if one of the following conditions is true (otherwise, run a changes-sync):
+     * Run a full-sync if one of the following conditions is true (otherwise, run an incremental-sync):
      * - the "is_next_run_full" db field is set to 1 (the store owner requested a full-sync through the admin interface,
      *   or there have been changes to categories, brands, languages or currencies)
      * - the last full-sync completed more than TYPESENSE_FULL_SYNC_FREQUENCY_HOURS hours ago, or has never been launched
      *
      * @return void
-     * @throws HttpClientException|TypesenseClientError|\JsonException
+     * @throws HttpClientException|TypesenseClientError|\JsonException|TypesenseIndexProductsException
      */
     public function runSync(): void
     {
@@ -135,7 +136,8 @@ class TypesenseZencart
                 TIMESTAMPDIFF(HOUR, last_full_sync_end_time, NOW()) AS hours_since_last_full_sync
             FROM
                 " . TABLE_TYPESENSE_SYNC . "
-            LIMIT 1
+            WHERE
+                id = 1
         ";
         $result = $db->Execute($sql);
 
@@ -150,6 +152,8 @@ class TypesenseZencart
                         " . TABLE_TYPESENSE_SYNC . "
                     SET
                         status = 'failed'
+                    WHERE
+                        id = 1
                 ";
                 $db->Execute($sql);
                 $result->fields['status'] = 'failed';
@@ -178,6 +182,8 @@ class TypesenseZencart
                         " . TABLE_TYPESENSE_SYNC . "
                     SET
                         is_next_run_full = 0
+                    WHERE
+                        id = 1
                 ";
                 $db->Execute($sql);
             }
@@ -193,7 +199,7 @@ class TypesenseZencart
      *
      * @return void
      */
-    public function setFullSyncGraceful(): void
+    public static function setFullSyncGraceful(): void
     {
         global $db;
 
@@ -202,6 +208,8 @@ class TypesenseZencart
                 " . TABLE_TYPESENSE_SYNC . "
             SET
                 is_next_run_full = 1
+            WHERE
+                id = 1
         ";
         $db->Execute($sql);
     }
@@ -211,7 +219,7 @@ class TypesenseZencart
      *
      * @return void
      */
-    public function setFullSyncForced(): void
+    public static function setFullSyncForced(): void
     {
         global $db;
 
@@ -221,6 +229,48 @@ class TypesenseZencart
             SET
                 status = 'completed',
                 is_next_run_full = 1
+            WHERE
+                id = 1
+        ";
+        $db->Execute($sql);
+    }
+
+    /**
+     * Adds a product ID to the list of products to be deleted in the next run.
+     *
+     * @param int $productsId
+     * @return void
+     */
+    public static function addProductsIdToBeDeleted(int $productsId): void
+    {
+        global $db;
+
+        $sql = "
+            SELECT
+                products_ids_to_delete
+            FROM
+                " . TABLE_TYPESENSE_SYNC . "
+            WHERE
+                id = 1
+        ";
+        $result = $db->Execute($sql);
+        if (empty($result->fields['products_ids_to_delete'])) {
+            $productsIdsToDelete = [];
+        } else {
+            $productsIdsToDelete = unserialize($result->fields['products_ids_to_delete']);
+        }
+        if (!is_array($productsIdsToDelete)) {
+            $productsIdsToDelete = [];
+        }
+        $productsIdsToDelete[] = $productsId;
+        $productsIdsToDelete = serialize($productsIdsToDelete);
+        $sql = "
+            UPDATE
+                " . TABLE_TYPESENSE_SYNC . "
+            SET
+                products_ids_to_delete = '" . $productsIdsToDelete . "'
+            WHERE
+                id = 1
         ";
         $db->Execute($sql);
     }
@@ -231,7 +281,7 @@ class TypesenseZencart
      * re-creation of the collection(s).
      *
      * @return void
-     * @throws HttpClientException|TypesenseClientError|\JsonException
+     * @throws HttpClientException|TypesenseClientError|\JsonException|TypesenseIndexProductsException
      */
     protected function syncFull(): void
     {
@@ -245,6 +295,8 @@ class TypesenseZencart
             SET
                 start_time = NOW(),
                 status = 'running'
+            WHERE
+                id = 1
         ";
         $db->Execute($sql);
 
@@ -282,6 +334,8 @@ class TypesenseZencart
                     " . TABLE_TYPESENSE_SYNC . "
                 SET
                     status = 'failed'
+                WHERE
+                    id = 1
             ";
             $db->Execute($sql);
 
@@ -293,8 +347,11 @@ class TypesenseZencart
                 " . TABLE_TYPESENSE_SYNC . "
             SET
                 end_time = NOW(),
-                last_full_sync_end_time = NOW(),
+                last_full_sync_start_time = start_time,
+                last_full_sync_end_time = end_time,
                 status = 'completed'
+            WHERE
+                id = 1
         ";
         $db->Execute($sql);
 
@@ -311,7 +368,7 @@ class TypesenseZencart
     {
         global $db;
 
-        $this->writeSyncLog('--- Starting changes-sync of Typesense products collection ---');
+        $this->writeSyncLog('--- Starting incremental-sync of Typesense products collection ---');
 
         $sql = "
             UPDATE
@@ -319,6 +376,8 @@ class TypesenseZencart
             SET
                 start_time = NOW(),
                 status = 'running'
+            WHERE
+                id = 1
         ";
         $db->Execute($sql);
 
@@ -326,7 +385,7 @@ class TypesenseZencart
             $productsCollectionName = $this->client->aliases[self::PRODUCTS_COLLECTION_NAME]->retrieve();
         } catch (ObjectNotFound $e) {
             $this->writeSyncLog('ERROR: alias ' . self::PRODUCTS_COLLECTION_NAME . ' not found. Run a full-sync to create it. Exiting...');
-            $this->writeSyncLog('--- Changes-sync failed ---');
+            $this->writeSyncLog('--- Incremental-sync failed ---');
             return;
         }
 
@@ -334,13 +393,15 @@ class TypesenseZencart
             $this->indexProductsCollection($productsCollectionName['collection_name']);
         } catch (\Exception $e) {
             $this->writeSyncLog('ERROR: ' . $e->getMessage());
-            $this->writeSyncLog('--- Changes-sync failed ---');
+            $this->writeSyncLog('--- Incremental-sync failed ---');
 
             $sql = "
                 UPDATE
                     " . TABLE_TYPESENSE_SYNC . "
                 SET
                     status = 'failed'
+                WHERE
+                    id = 1
             ";
             $db->Execute($sql);
 
@@ -352,11 +413,15 @@ class TypesenseZencart
                 " . TABLE_TYPESENSE_SYNC . "
             SET
                 end_time = NOW(),
+                last_incremental_sync_start_time = start_time,
+                last_incremental_sync_end_time = end_time,
                 status = 'completed'
+            WHERE
+                id = 1
         ";
         $db->Execute($sql);
 
-        $this->writeSyncLog('--- Changes-sync completed ---');
+        $this->writeSyncLog('--- Incremental-sync completed ---');
     }
 
     /**
@@ -383,15 +448,34 @@ class TypesenseZencart
 
     /**
      * Indexes the product documents.
-     * If $fullSync is false, only the products that have been updated since the last sync are indexed.
+     * If $fullSync is false, only the products that have been created/updated/deleted since the last sync are indexed.
      *
      * @param string $productsCollectionName
      * @param bool $fullSync
-     * @throws TypesenseClientError|HttpClientException|\JsonException
+     * @throws TypesenseClientError|HttpClientException|\JsonException|TypesenseIndexProductsException
      */
     protected function indexProductsCollection(string $productsCollectionName, bool $fullSync = false): void
     {
         global $db, $currencies;
+
+        if (!$fullSync) {
+            $sql = "
+                SELECT
+                    last_incremental_sync_start_time,
+                    last_full_sync_start_time
+                FROM
+                    " . TABLE_TYPESENSE_SYNC . "
+                WHERE
+                    id = 1
+            ";
+            $lastSyncStartTime = $db->Execute($sql)->fields['last_incremental_sync_start_time'];
+            if (!$lastSyncStartTime) {
+                $lastSyncStartTime = $db->Execute($sql)->fields['last_full_sync_start_time'];
+            }
+            if (!$lastSyncStartTime) {
+                throw new TypesenseIndexProductsException('Last sync start time not found. Run a full-sync first.');
+            }
+        }
 
         $sql = "
             SELECT
@@ -409,14 +493,18 @@ class TypesenseZencart
                 LEFT JOIN " . TABLE_MANUFACTURERS . " m ON (m.manufacturers_id = p.manufacturers_id)
             WHERE
                 p.products_status <> 0" .
-                ($fullSync ? '' : "
-                AND p.products_last_modified >= (SELECT start_time FROM " . TABLE_TYPESENSE_SYNC . ")"
-                )
+                ($fullSync ? "" : " AND (
+                    p.products_last_modified >= :lastSyncStartTime
+                    OR p.products_date_added >= :lastSyncStartTime
+                )")
         ;
+        if (!$fullSync) {
+            $sql = $db->bindVars($sql, ':lastSyncStartTime', $lastSyncStartTime, 'date');
+        }
         $products = $db->Execute($sql);
 
         if ($products->RecordCount() === 0) {
-            $this->writeSyncLog($fullSync ? 'No products to index' : 'No products to update');
+            $this->writeSyncLog($fullSync ? 'No products to index' : 'No products to insert/update');
         } else {
             $productsToIndex = [];
             $i = 1;
@@ -482,21 +570,42 @@ class TypesenseZencart
         if ($fullSync) {
             // No need to keep track of the products to delete anymore, since we just full-synced the collection
             $sql = "
-                UPDATE " . TABLE_TYPESENSE_SYNC . "
-                SET products_ids_to_delete = NULL
+                UPDATE
+                    " . TABLE_TYPESENSE_SYNC . "
+                SET
+                    products_ids_to_delete = NULL
+                WHERE
+                    id = 1
             ";
             $db->Execute($sql);
         } else {
-/*            $sql = "
-                SELECT products_ids_to_delete
-                FROM " . TABLE_TYPESENSE_SYNC . "
-            ";
+            $sql = "
+                SELECT
+                    products_ids_to_delete
+                FROM
+                    " . TABLE_TYPESENSE_SYNC
+            ;
             $productsIdsToDelete = $db->Execute($sql);
-            $productsIdsToDelete = unserialize($productsIdsToDelete->fields['products_ids_to_delete']);
-            if (!empty($productsIdsToDelete)) {
-                $this->writeSyncLog("Deleting products " . implode(', ', $productsIdsToDelete));
-                $this->client->collections[$productsCollectionName]->documents->delete($productsIdsToDelete);
-            }*/
+            if (!empty($productsIdsToDelete->fields['products_ids_to_delete'])) {
+                $productsIdsToDelete = unserialize($productsIdsToDelete->fields['products_ids_to_delete']);
+                if (is_array($productsIdsToDelete)) {
+                    $productsIdsToDeleteList = implode(', ', $productsIdsToDelete);
+                    $this->writeSyncLog("Deleting product IDs " . $productsIdsToDeleteList);
+                    $this->client->collections[$productsCollectionName]->documents->delete(['filter_by' => 'id:[' . $productsIdsToDeleteList . ']']);
+                }
+
+                $sql = "
+                    UPDATE
+                        " . TABLE_TYPESENSE_SYNC . "
+                    SET
+                        products_ids_to_delete = NULL
+                    WHERE
+                        id = 1
+                ";
+                $db->Execute($sql);
+            } else {
+                $this->writeSyncLog('No products to delete');
+            }
         }
     }
 
@@ -529,11 +638,14 @@ class TypesenseZencart
             $categoryData['products-count'] = zen_count_products_in_category($category['categories_id']);
 
             foreach ($this->languages as $language) {
-                $categoryAdditionalData = $db->Execute(
-                    "SELECT categories_name
-                     FROM " . TABLE_CATEGORIES_DESCRIPTION . "
-                     WHERE categories_id = " . (int)$category['categories_id'] . "
-                     AND language_id = " . (int)$language['languages_id']
+                $categoryAdditionalData = $db->Execute("
+                    SELECT
+                        categories_name
+                    FROM
+                        " . TABLE_CATEGORIES_DESCRIPTION . "
+                    WHERE
+                        categories_id = " . (int)$category['categories_id'] . "
+                        AND language_id = " . (int)$language['languages_id']
                 );
 
                 if ($categoryAdditionalData->RecordCount() > 0) {
@@ -574,12 +686,15 @@ class TypesenseZencart
             $brandData['name'] = $brand['manufacturers_name'];
             $brandData['image'] = $brand['manufacturers_image'] ?? '';
 
-            $manufacturerAdditionalData = $db->Execute(
-                "SELECT COUNT(*) AS products_count
-                 FROM " . TABLE_PRODUCTS . "
-                 WHERE manufacturers_id = " . (int)$brand['manufacturers_id'] .
-                " AND products_status = 1"
-            );
+            $manufacturerAdditionalData = $db->Execute("
+                SELECT
+                    COUNT(*) AS products_count
+                FROM
+                    " . TABLE_PRODUCTS . "
+                WHERE
+                    manufacturers_id = " . (int)$brand['manufacturers_id'] . "
+                    AND products_status = 1
+            ");
             $brandData['products-count'] = (int)$manufacturerAdditionalData->fields['products_count'];
 
             $brandsToImport[] = $brandData;
