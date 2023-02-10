@@ -157,6 +157,16 @@ class TypesenseSearchEngineProvider extends \base implements SearchEngineProvide
             'q' => $queryText,
         ];
 
+        $this->notify(
+            'NOTIFY_INSTANT_SEARCH_TYPESENSE_BEFORE_SEARCH',
+            $queryText,
+            $searchRequests,
+            $commonSearchParams,
+            $productsLimit,
+            $categoriesLimit,
+            $manufacturersLimit,
+            $alphaFilter
+        );
 
         $typesenseResults = $this->client->multiSearch->perform($searchRequests, $commonSearchParams);
 
@@ -180,20 +190,22 @@ class TypesenseSearchEngineProvider extends \base implements SearchEngineProvide
                     $result['products_price']           = $document['price'];
                     $result['products_displayed_price'] = $document['displayed-price_' . $_SESSION['currency']] ?? '';
                 } elseif (strpos($collectionName, TypesenseZencart::CATEGORIES_COLLECTION_NAME) === 0) {
-                    $result['categories_id']    = $document['id'];
-                    $result['categories_name']  = $document["name_$languageCode"];
-                    $result['categories_image'] = $document['image'];
-                    $result['categories_count'] = $document['products-count'];
+                    $result['categories_id']            = $document['id'];
+                    $result['categories_name']          = $document["name_$languageCode"];
+                    $result['categories_image']         = $document['image'];
+                    $result['categories_count']         = $document['products-count'];
                 } elseif (strpos($collectionName, TypesenseZencart::BRANDS_COLLECTION_NAME) === 0) {
-                    $result['manufacturers_id']    = $document['id'];
-                    $result['manufacturers_name']  = $document['name'];
-                    $result['manufacturers_image'] = $document['image'];
-                    $result['manufacturers_count'] = $document['products-count'];
+                    $result['manufacturers_id']         = $document['id'];
+                    $result['manufacturers_name']       = $document['name'];
+                    $result['manufacturers_image']      = $document['image'];
+                    $result['manufacturers_count']      = $document['products-count'];
                 }
 
                 $this->results[] = $result;
             }
         }
+
+        $this->notify('NOTIFY_INSTANT_SEARCH_TYPESENSE_BEFORE_RESULTS', $queryText, $typesenseResults, $this->results);
 
         return $this->results;
     }
