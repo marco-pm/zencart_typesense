@@ -10,7 +10,7 @@
 declare(strict_types=1);
 
 chdir(__DIR__);
-$loaderPrefix = 'instantsearch_typesense_cron';
+$loaderPrefix = 'typesense_cron';
 $_SERVER['REMOTE_ADDR'] = 'cron';
 $_SERVER['REQUEST_URI'] = 'cron';
 $result = require('includes/application_top.php');
@@ -34,12 +34,3 @@ try {
     $logger->writeErrorLog("Error while syncing the collections, exiting", $e);
     exit();
 }
-
-/*$client = $typesense->getClient();
-
-try {
-    $suca = $client->collections->retrieve();
-} catch (Exception|\Http\Client\Exception $e) {
-    $logger->writeErrorLog("Error while retrieving collections, exiting", $e);
-    exit();
-}*/

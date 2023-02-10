@@ -25,8 +25,6 @@ class ScriptedInstaller extends ScriptedInstallBase
      */
     public function doInstall(): bool
     {
-        global $messageStack;
-
         // Check that Instant Search plugin is installed and has a version >= 4
         $sql = $this->dbConn->Execute("
             SELECT
