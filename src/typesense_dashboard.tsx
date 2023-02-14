@@ -8,94 +8,73 @@
 
 import React from 'react'
 import { createRoot } from 'react-dom/client';
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { ChakraProvider } from '@chakra-ui/react';
-import { extendTheme } from "@chakra-ui/react";
-import { Card, CardHeader, CardBody, Heading, Icon, SimpleGrid, Text, Spinner, Progress, Box } from '@chakra-ui/react';
-import { BiServer } from 'react-icons/bi';
-import { HealthResponse } from 'typesense/lib/Typesense/Health';
-import { MetricsResponse } from 'typesense/lib/Typesense/Metrics';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { Container } from "@mui/material";
+import { grey } from "@mui/material/colors";
+import Box from '@mui/material/Box';
+import Grid from '@mui/material/Unstable_Grid2';
+import ScopedCssBaseline from '@mui/material/ScopedCssBaseline';
+import Typography from '@mui/material/Typography';
+import CardServerStatus from "./CardServerStatus";
 
-const theme = extendTheme({
-    fonts: {
-        body: "Roboto, sans-serif",
+declare const typesenseI18n: { [key: string]: string };
+
+const theme = createTheme({
+    palette: {
+        primary: grey,
     },
-})
+    components: {
+        MuiCardContent: {
+            styleOverrides: {
+                root: {
+                    padding: '1.5em',
+                    "&:last-child": {
+                        paddingBottom: '1.5em',
+                    },
+                },
+            },
+        },
+    },
+});
 
 const queryClient = new QueryClient();
-
-async function fetchData<T>(ajaxMethod: string, isPost: boolean): Promise<T> {
-    const response = await fetch(`ajax.php?act=ajaxAdminTypesenseDashboard&method=${ajaxMethod}`, {
-        method: isPost ? 'POST' : 'GET',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-        },
-    });
-    return await response.json() as T;
-}
-
-const CardServerStatus = () => {
-    const healthQuery = useQuery({
-        queryKey: ['health'],
-        queryFn: async () => fetchData<HealthResponse>('getHealth', false),
-    });
-
-    const metricsQuery = useQuery({
-        queryKey: ['metrics'],
-        queryFn: async () => fetchData<MetricsResponse>('getMetrics', false),
-        refetchInterval: 5000,
-    });
-
-    let cardContent: JSX.Element = <Spinner />;
-    let bgColor = 'white';
-    if (!healthQuery.isLoading && !metricsQuery.isLoading) {
-        if (healthQuery.isError || !healthQuery.data || metricsQuery.isError || !metricsQuery.data) {
-            console.log(healthQuery.error);
-            bgColor = 'yellow.50';
-            cardContent = <Text>Error while retrieving data</Text>;
-        } else if (!healthQuery.data.ok) {
-            bgColor = 'red.100';
-            cardContent = <Text>Server not OK</Text>;
-        } else {
-            console.log(metricsQuery.data);
-            bgColor = 'green.50';
-            cardContent =
-                <>
-                    <Box>
-                        <strong>OK</strong>
-                    </Box>
-                    <Box mt={4}>
-                        Memory usage: {metricsQuery.data.system_disk_used_bytes}
-                        <Progress value={parseInt(metricsQuery.data.system_disk_used_bytes) / parseInt(metricsQuery.data.system_disk_total_bytes) * 100} />
-                    </Box>
-                </>;
-        }
-    }
-
-    return (
-        <Card bg={bgColor}>
-            <CardHeader>
-                <Heading display='flex' alignItems='center' columnGap={2}>
-                    <Icon as={BiServer} /> Server status
-                </Heading>
-            </CardHeader>
-            <CardBody>
-                {cardContent}
-            </CardBody>
-        </Card>
-    );
-}
 
 const Dashboard = () => {
     return (
         <React.StrictMode>
             <QueryClientProvider client={queryClient}>
-                <ChakraProvider theme={theme}>
-                    <Heading mb={10} textAlign='center'>Typesense Dashboard</Heading>
-                    <SimpleGrid columns={[1, null, 2]} spacing={10} p={4} fontSize='1.3rem'>
-                        <CardServerStatus />
-                    </SimpleGrid>
-                </ChakraProvider>
+                <ScopedCssBaseline>
+                    <ThemeProvider theme={theme}>
+                        <Container sx={{ fontSize: 16, marginBottom: 5 }}>
+                            <Typography
+                                component="h1"
+                                variant="h4"
+                                textAlign="center"
+                                mt={3}
+                                mb={5}
+                                fontWeight={700}
+                                sx={{ fontVariant: 'none' }}
+                            >
+                                {typesenseI18n['TYPESENSE_DASHBOARD_TITLE']}
+                            </Typography>
+                            <Grid container spacing={4}>
+                                <Grid xs={12} sm={6}>
+                                    <CardServerStatus />
+                                </Grid>
+                                <Grid xs={12} sm={6}>
+                                    <Box>suca</Box>
+                                </Grid>
+                                <Grid xs={12} sm={6}>
+                                    <Box>suca</Box>
+                                </Grid>
+                                <Grid xs={12} sm={6}>
+                                    <Box>suca</Box>
+                                </Grid>
+                            </Grid>
+                        </Container>
+                    </ThemeProvider>
+                </ScopedCssBaseline>
             </QueryClientProvider>
         </React.StrictMode>
     );

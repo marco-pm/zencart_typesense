@@ -21,6 +21,11 @@ use Zencart\Plugins\Catalog\Typesense\TypesenseZencart;
 
 $logger = new InstantSearchLogger('typesense-cron');
 
+if (!TypesenseZencart::isTypesenseEnabledAndConfigured()) {
+    $logger->writeErrorLog("Typesense is not enabled or configured, exiting");
+    exit();
+}
+
 try {
     $typesense = new TypesenseZencart();
 } catch (Exception $e) {

@@ -112,6 +112,21 @@ class TypesenseZencart
         return $this->client;
     }
 
+
+    /**
+     * Checks if Typesense is enabled and configured.
+     *
+     * @return bool
+     */
+    public static function isTypesenseEnabledAndConfigured(): bool
+    {
+        return defined('INSTANT_SEARCH_ENGINE') &&
+            INSTANT_SEARCH_ENGINE === 'Typesense' &&
+            !empty(TYPESENSE_HOST) &&
+            !empty(TYPESENSE_PORT) &&
+            !empty(TYPESENSE_KEY);
+    }
+
     /**
      * Run the sync process, if it's not already running and other conditions are met.
      * Run a full-sync if one of the following conditions is true (otherwise, run an incremental-sync):
