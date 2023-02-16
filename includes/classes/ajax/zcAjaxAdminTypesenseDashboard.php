@@ -83,18 +83,47 @@ class zcAjaxAdminTypesenseDashboard extends base
     }
 
     /**
-     * Gets the Typesense collections.
+     * Gets the Typesense server collections and their number of documents.
      *
      * @return array
      */
-    public function getCollections(): array
+    public function getCollectionsNoOfDocuments(): array
     {
+        $zencartAliases = [
+            TypesenseZencart::PRODUCTS_COLLECTION_NAME,
+            TypesenseZencart::CATEGORIES_COLLECTION_NAME,
+            TypesenseZencart::BRANDS_COLLECTION_NAME,
+        ];
+
+        $collectionsNoOfDocuments = [];
+
         try {
-            return $this->client->collections->retrieve();
+            $aliases = $this->client->aliases->retrieve();
+            $collections = $this->client->collections->retrieve();
+
+            if (empty($aliases) || empty($aliases['aliases']) || empty($collections)) {
+                return $collectionsNoOfDocuments;
+            }
+
+            foreach ($aliases['aliases'] as $alias) {
+                if (!in_array($alias['name'], $zencartAliases)) {
+                    continue;
+                }
+                $collectionIndex = array_search($alias['collection_name'], array_column($collections, 'name'));
+                if ($collectionIndex === false) {
+                    continue;
+                }
+                $collectionsNoOfDocuments[] = [
+                    'alias_name'    => str_replace(DB_DATABASE . '_', '', $alias['name']),
+                    'num_documents' => $collections[$collectionIndex]['num_documents'],
+                ];
+            }
         } catch (Exception|\Http\Client\Exception $e) {
             $this->logger->writeErrorLog("Error while retrieving Typesense collections", $e);
             http_response_code(500);
             exit();
         }
+
+        return $collectionsNoOfDocuments;
     }
 }

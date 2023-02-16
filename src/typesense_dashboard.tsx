@@ -8,15 +8,16 @@
 
 import React from 'react'
 import { createRoot } from 'react-dom/client';
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { Container } from "@mui/material";
-import { grey } from "@mui/material/colors";
+import { Container } from '@mui/material';
+import { grey } from '@mui/material/colors';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Unstable_Grid2';
 import ScopedCssBaseline from '@mui/material/ScopedCssBaseline';
 import Typography from '@mui/material/Typography';
-import CardServerStatus from "./CardServerStatus";
+import CardServerStatus from './CardServerStatus';
+import CardCollections from './CardCollections';
 
 declare const typesenseI18n: { [key: string]: string };
 
@@ -28,13 +29,20 @@ const theme = createTheme({
         MuiCardContent: {
             styleOverrides: {
                 root: {
-                    padding: '1.5em',
-                    "&:last-child": {
-                        paddingBottom: '1.5em',
+                    padding: '1.5rem',
+                    '&:last-child': {
+                        paddingBottom: '1.5rem',
                     },
                 },
             },
         },
+        MuiTableCell: {
+            styleOverrides: {
+                root: {
+                    padding: '8px 0',
+                }
+            }
+        }
     },
 });
 
@@ -46,30 +54,30 @@ const Dashboard = () => {
             <QueryClientProvider client={queryClient}>
                 <ScopedCssBaseline>
                     <ThemeProvider theme={theme}>
-                        <Container sx={{ fontSize: 16, marginBottom: 5 }}>
+                        <Container sx={{ marginBottom: 5 }}>
                             <Typography
-                                component="h1"
-                                variant="h4"
-                                textAlign="center"
-                                mt={3}
+                                component='h1'
+                                variant='h5'
+                                textAlign='center'
+                                mt={4}
                                 mb={5}
                                 fontWeight={700}
                                 sx={{ fontVariant: 'none' }}
                             >
                                 {typesenseI18n['TYPESENSE_DASHBOARD_TITLE']}
                             </Typography>
-                            <Grid container spacing={4}>
+                            <Grid container spacing={4} alignItems='stretch'>
                                 <Grid xs={12} sm={6}>
                                     <CardServerStatus />
                                 </Grid>
                                 <Grid xs={12} sm={6}>
-                                    <Box>suca</Box>
+                                    <CardCollections />
                                 </Grid>
                                 <Grid xs={12} sm={6}>
-                                    <Box>suca</Box>
+                                    <Box>temp</Box>
                                 </Grid>
                                 <Grid xs={12} sm={6}>
-                                    <Box>suca</Box>
+                                    <Box>temp</Box>
                                 </Grid>
                             </Grid>
                         </Container>

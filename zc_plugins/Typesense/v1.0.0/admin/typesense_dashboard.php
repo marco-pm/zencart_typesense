@@ -29,6 +29,15 @@ use Zencart\Plugins\Catalog\Typesense\TypesenseZencart;
             ?>
         };
     </script>
+    <style>
+        body, html, table {
+            font-size: 16px;
+        }
+
+        .row, .navbar {
+            font-size: 11px !important;
+        }
+    </style>
 </head>
 <body>
 <!-- header //-->
