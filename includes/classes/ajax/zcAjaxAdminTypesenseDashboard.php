@@ -83,6 +83,51 @@ class zcAjaxAdminTypesenseDashboard extends base
     }
 
     /**
+     * Gets the Typesense sync status.
+     *
+     * @return array
+     */
+    public function getSyncStatus(): array
+    {
+        $db = $GLOBALS['db'];
+        $sql = "
+            SELECT
+                status,
+                is_next_run_full,
+                last_incremental_sync_end_time,
+                last_full_sync_end_time,
+                TIMESTAMPDIFF(MINUTE, start_time, NOW()) AS minutes_since_last_start,
+                TIMESTAMPDIFF(SECOND, start_time, NOW()) AS seconds_since_last_start,
+                TIMESTAMPDIFF(HOUR, last_full_sync_end_time, NOW()) AS hours_since_last_full_sync
+            FROM
+                " . TABLE_TYPESENSE_SYNC . "
+            WHERE
+                id = 1
+        ";
+        $result = $db->Execute($sql);
+        if ($result->RecordCount() === 0) {
+            $this->logger->writeErrorLog("Error while retrieving Typesense sync status: the table " . TABLE_TYPESENSE_SYNC . " is empty");
+            http_response_code(500);
+            exit();
+        }
+        return $result->fields;
+    }
+
+    /**
+     * Sets the next sync to be a full-sync.
+     *
+     * @return void
+     */
+    public function setFullSyncGraceful(): void
+    {
+        if (!empty($_GET['isForced']) && $_GET['isForced'] === 'false') {
+            TypesenseZencart::setFullSyncGraceful();
+        } else {
+            TypesenseZencart::setFullSyncForced();
+        }
+    }
+
+    /**
      * Gets the Typesense server collections and their number of documents.
      *
      * @return array

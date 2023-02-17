@@ -1,14 +1,13 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchData, ErrorMessageBox, CardStatus } from './dashboard_utils';
+import { fetchData, ErrorMessageBox, CardStatus, LoadingBox } from './dashboard_utils';
 import { HealthResponse } from 'typesense/lib/Typesense/Health';
 import { MetricsResponse } from 'typesense/lib/Typesense/Metrics';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import CircularProgress from '@mui/material/CircularProgress';
 import StorageIcon from '@mui/icons-material/Storage';
 import LinearProgress from '@mui/material/LinearProgress';
-import DashboardCard from "./DashboardCard";
+import DashboardCard from './DashboardCard';
 
 declare const typesenseI18n: { [key: string]: string };
 
@@ -17,14 +16,14 @@ export default function CardServerStatus () {
 
     const healthQuery = useQuery({
         queryKey: ['health'],
-        queryFn: async () => fetchData<HealthResponse>('getHealth', false),
+        queryFn: async () => fetchData<HealthResponse>('getHealth'),
         retry: false,
         refetchOnWindowFocus: false
     });
 
     const metricsQuery = useQuery({
         queryKey: ['metrics'],
-        queryFn: async () => fetchData<MetricsResponse>('getMetrics', false),
+        queryFn: async () => fetchData<MetricsResponse>('getMetrics'),
         refetchInterval: refetchInterval,
         retry: false,
         refetchOnWindowFocus: false,
@@ -37,10 +36,7 @@ export default function CardServerStatus () {
         return Number(gigabytes.toFixed(2));
     }
 
-    let cardContent: JSX.Element =
-        <Box textAlign='center'>
-            <CircularProgress sx={{ my: 2 }}/>
-        </Box>;
+    let cardContent = <LoadingBox />;
     let cardStatus = CardStatus.LOADING;
 
     if (!healthQuery.isLoading && !metricsQuery.isLoading) {
@@ -64,12 +60,12 @@ export default function CardServerStatus () {
                 <Stack width='100%'>
                     <Box pb={1}>
                         <strong>{healthQuery.data.ok
-                            ? typesenseI18n['TYPESENSE_DASHBOARD_CARD_STATUS_OK']
-                            : typesenseI18n['TYPESENSE_DASHBOARD_CARD_STATUS_ERROR']
+                            ? typesenseI18n['TYPESENSE_DASHBOARD_CARD_SERVER_STATUS_OK']
+                            : typesenseI18n['TYPESENSE_DASHBOARD_CARD_SERVER_STATUS_ERROR']
                         }</strong>
                     </Box>
                     <Box mt={2} fontSize='0.8em'>
-                        {typesenseI18n['TYPESENSE_DASHBOARD_CARD_STATUS_MEMORY_USAGE']}: {memoryUsedPercent}%
+                        {typesenseI18n['TYPESENSE_DASHBOARD_CARD_SERVER_STATUS_MEMORY_USAGE']}: {memoryUsedPercent}%
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', columnGap: 2, marginTop: '0.1em'  }}>
                         <Box sx={{ width: '75%' }}>
@@ -80,7 +76,7 @@ export default function CardServerStatus () {
                         </Box>
                     </Box>
                     <Box mt={1} fontSize='0.8em'>
-                        {typesenseI18n['TYPESENSE_DASHBOARD_CARD_STATUS_DISK_USAGE']}: {diskUsedPercent}%
+                        {typesenseI18n['TYPESENSE_DASHBOARD_CARD_SERVER_STATUS_DISK_USAGE']}: {diskUsedPercent}%
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', columnGap: 2, marginTop: '0.1em' }}>
                         <Box sx={{ width: '75%' }}>
@@ -97,7 +93,7 @@ export default function CardServerStatus () {
     return (
         <DashboardCard
             cardIcon={<StorageIcon sx={{ fontSize:'1.05rem' }} />}
-            cardTitle={typesenseI18n['TYPESENSE_DASHBOARD_CARD_STATUS_TITLE']}
+            cardTitle={typesenseI18n['TYPESENSE_DASHBOARD_CARD_SERVER_STATUS_TITLE']}
             cardContent={cardContent}
             cardStatus={cardStatus}
         />

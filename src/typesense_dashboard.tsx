@@ -17,6 +17,7 @@ import Grid from '@mui/material/Unstable_Grid2';
 import ScopedCssBaseline from '@mui/material/ScopedCssBaseline';
 import Typography from '@mui/material/Typography';
 import CardServerStatus from './CardServerStatus';
+import CardSyncStatus from './CardSyncStatus';
 import CardCollections from './CardCollections';
 
 declare const typesenseI18n: { [key: string]: string };
@@ -24,6 +25,9 @@ declare const typesenseI18n: { [key: string]: string };
 const theme = createTheme({
     palette: {
         primary: grey,
+        secondary: {
+            main: grey[200],
+        },
     },
     components: {
         MuiCardContent: {
@@ -67,16 +71,16 @@ const Dashboard = () => {
                                 {typesenseI18n['TYPESENSE_DASHBOARD_TITLE']}
                             </Typography>
                             <Grid container spacing={4} alignItems='stretch'>
-                                <Grid xs={12} sm={6}>
+                                <Grid xs={12} md={6}>
                                     <CardServerStatus />
                                 </Grid>
-                                <Grid xs={12} sm={6}>
+                                <Grid xs={12} md={6}>
+                                    <CardSyncStatus />
+                                </Grid>
+                                <Grid xs={12} md={6}>
                                     <CardCollections />
                                 </Grid>
-                                <Grid xs={12} sm={6}>
-                                    <Box>temp</Box>
-                                </Grid>
-                                <Grid xs={12} sm={6}>
+                                <Grid xs={12} md={6}>
                                     <Box>temp</Box>
                                 </Grid>
                             </Grid>

@@ -28,6 +28,9 @@ use Zencart\Plugins\Catalog\Typesense\TypesenseZencart;
             }
             ?>
         };
+        const typesenseSyncAfterFailed = <?php echo TYPESENSE_SYNC_AFTER_FAILED; ?>;
+        const typesenseSyncTimeoutMinutes = <?php echo TYPESENSE_SYNC_TIMEOUT_MINUTES; ?>;
+        const typesenseFullSyncFrequencyHours = <?php echo TYPESENSE_FULL_SYNC_FREQUENCY_HOURS; ?>;
     </script>
     <style>
         body, html, table {

@@ -9,6 +9,7 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import { amber, grey, lightGreen, red } from '@mui/material/colors';
+import CircularProgress from '@mui/material/CircularProgress';
 
 export enum CardStatus {
     LOADING = 'loading',
@@ -36,13 +37,38 @@ export const CardStatusInfo = {
     },
 };
 
-export async function fetchData<T>(ajaxMethod: string, isPost: boolean): Promise<T> {
-    const response = await fetch(`ajax.php?act=ajaxAdminTypesenseDashboard&method=${ajaxMethod}`, {
-        method: isPost ? 'POST' : 'GET',
+interface SetFullSyncParam {
+    isForced: boolean;
+}
+
+type OptionsType = {
+    method: string;
+    headers: {
+        'Content-Type': string;
+        'X-Requested-With': string;
+    };
+    body?: string;
+};
+
+export async function fetchData<T>(ajaxMethod: string, parameters?: SetFullSyncParam): Promise<T> {
+    let url = `ajax.php?act=ajaxAdminTypesenseDashboard&method=${ajaxMethod}`;
+
+    if (parameters) {
+        const params = new URLSearchParams();
+        Object.entries(parameters).forEach(([key, value]) => params.append(key, String(value)));
+        url += `&${params.toString()}`;
+    }
+
+    const options: OptionsType = {
+        method: 'GET',
         headers: {
+            'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
         },
-    });
+    };
+
+    const response = await fetch(url, options);
+
     return await response.json() as T;
 }
 
@@ -51,6 +77,14 @@ export function ErrorMessageBox({ messageLine1, messageLine2 }: { messageLine1: 
         <Box display='flex' flexDirection='column' alignItems='center' justifyContent='center'>
             <p><strong>{messageLine1}</strong></p>
             <p>{messageLine2}</p>
+        </Box>
+    );
+}
+
+export function LoadingBox() {
+    return (
+        <Box textAlign='center'>
+            <CircularProgress sx={{ my: 2 }}/>
         </Box>
     );
 }

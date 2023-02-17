@@ -1,9 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchData, ErrorMessageBox, CardStatus } from './dashboard_utils';
+import { fetchData, ErrorMessageBox, CardStatus, LoadingBox } from './dashboard_utils';
 import DashboardCard from './DashboardCard';
-import Box from '@mui/material/Box';
-import CircularProgress from '@mui/material/CircularProgress';
 import LayersIcon from '@mui/icons-material/Layers';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -22,15 +20,12 @@ interface CollectionNoOfDocuments {
 export default function CardCollections () {
     const collectionsQuery = useQuery({
         queryKey: ['collections'],
-        queryFn: async () => fetchData<CollectionNoOfDocuments[]>('getCollectionsNoOfDocuments', false),
+        queryFn: async () => fetchData<CollectionNoOfDocuments[]>('getCollectionsNoOfDocuments'),
         retry: false,
         refetchOnWindowFocus: false
     });
 
-    let cardContent: JSX.Element =
-        <Box textAlign='center'>
-            <CircularProgress sx={{ my: 2 }}/>
-        </Box>;
+    let cardContent = <LoadingBox />;
     let cardStatus = CardStatus.LOADING;
 
     if (!collectionsQuery.isLoading) {
