@@ -10,6 +10,7 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import { amber, grey, lightGreen, red } from '@mui/material/colors';
 import CircularProgress from '@mui/material/CircularProgress';
+import { SynonymSchema } from 'typesense/lib/Typesense/Synonym';
 
 export enum CardStatus {
     LOADING = 'loading',
@@ -37,9 +38,21 @@ export const CardStatusInfo = {
     },
 };
 
+export enum ZencartCollection {
+    PRODUCTS = 'products',
+    CATEGORIES = 'categories',
+    BRANDS = 'brands',
+}
+
 interface SetFullSyncParam {
     isForced: boolean;
 }
+
+export interface SynonymSchemaWithCollection extends SynonymSchema {
+    collection: ZencartCollection;
+}
+
+type FetchDataParameter = SetFullSyncParam | SynonymSchemaWithCollection;
 
 type OptionsType = {
     method: string;
@@ -50,12 +63,20 @@ type OptionsType = {
     body?: string;
 };
 
-export async function fetchData<T>(ajaxMethod: string, parameters?: SetFullSyncParam): Promise<T> {
+export async function fetchData<T>(ajaxMethod: string, parameters?: FetchDataParameter): Promise<T> {
     let url = `ajax.php?act=ajaxAdminTypesenseDashboard&method=${ajaxMethod}`;
 
     if (parameters) {
         const params = new URLSearchParams();
-        Object.entries(parameters).forEach(([key, value]) => params.append(key, String(value)));
+        Object.entries(parameters).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+                // Must pass the array as a string because ajax.php does not support arrays as $_GET parameters
+                const stringValues = value.map(item => String(item).replace(/\|/g, '')); // Remove | characters
+                params.append(key, stringValues.join('|'));
+            } else {
+                params.append(key, String(value));
+            }
+        });
         url += `&${params.toString()}`;
     }
 

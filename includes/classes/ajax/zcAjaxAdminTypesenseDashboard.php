@@ -16,6 +16,17 @@ use Zencart\Plugins\Catalog\Typesense\TypesenseZencart;
 class zcAjaxAdminTypesenseDashboard extends base
 {
     /**
+     * The Typesense collections that are used by the plugin.
+     *
+     * @var array
+     */
+    protected const ZENCART_ALIASES = [
+        TypesenseZencart::PRODUCTS_COLLECTION_NAME,
+        TypesenseZencart::CATEGORIES_COLLECTION_NAME,
+        TypesenseZencart::BRANDS_COLLECTION_NAME,
+    ];
+
+    /**
      * The Typesense PHP client.
      *
      * @var Client
@@ -51,7 +62,7 @@ class zcAjaxAdminTypesenseDashboard extends base
     }
 
     /**
-     * Gets the Typesense server health.
+     * Gets the server health.
      *
      * @return array
      */
@@ -60,14 +71,14 @@ class zcAjaxAdminTypesenseDashboard extends base
         try {
             return $this->client->health->retrieve();
         } catch (Exception|\Http\Client\Exception $e) {
-            $this->logger->writeErrorLog("Error while retrieving Typesense health", $e);
+            $this->logger->writeErrorLog("Error while retrieving health", $e);
             http_response_code(500);
             exit();
         }
     }
 
     /**
-     * Gets the Typesense server metrics.
+     * Gets the server metrics.
      *
      * @return array
      */
@@ -83,7 +94,7 @@ class zcAjaxAdminTypesenseDashboard extends base
     }
 
     /**
-     * Gets the Typesense sync status.
+     * Gets the sync status.
      *
      * @return array
      */
@@ -115,6 +126,7 @@ class zcAjaxAdminTypesenseDashboard extends base
 
     /**
      * Sets the next sync to be a full-sync.
+     * If $_GET['isForced'] is set to false, the next sync will be a graceful full-sync.
      *
      * @return void
      */
@@ -128,18 +140,12 @@ class zcAjaxAdminTypesenseDashboard extends base
     }
 
     /**
-     * Gets the Typesense server collections and their number of documents.
+     * Gets the collections and their number of documents.
      *
      * @return array
      */
     public function getCollectionsNoOfDocuments(): array
     {
-        $zencartAliases = [
-            TypesenseZencart::PRODUCTS_COLLECTION_NAME,
-            TypesenseZencart::CATEGORIES_COLLECTION_NAME,
-            TypesenseZencart::BRANDS_COLLECTION_NAME,
-        ];
-
         $collectionsNoOfDocuments = [];
 
         try {
@@ -151,7 +157,7 @@ class zcAjaxAdminTypesenseDashboard extends base
             }
 
             foreach ($aliases['aliases'] as $alias) {
-                if (!in_array($alias['name'], $zencartAliases)) {
+                if (!in_array($alias['name'], self::ZENCART_ALIASES)) {
                     continue;
                 }
                 $collectionIndex = array_search($alias['collection_name'], array_column($collections, 'name'));
@@ -170,5 +176,112 @@ class zcAjaxAdminTypesenseDashboard extends base
         }
 
         return $collectionsNoOfDocuments;
+    }
+
+    /**
+     * Adds/updates a collection's synonym.
+     * The synonym is passed via $_GET['synonyms'] and $_GET['collection'].
+     * If $_GET['root'] is set, it will be used as the root of the synonym (one-way synonym).
+     * If $_GET['id'] is set, the synonym will be updated, otherwise a new synonym will be created.
+     *
+     * @return array The created/updated synonym
+     */
+    public function upsertSynonym(): array
+    {
+        if (empty($_GET['synonyms']) || empty($_GET['collection'])) {
+            http_response_code(400);
+            exit();
+        }
+
+        $synonym = [
+            "synonyms" => explode('|', $_GET['synonyms'])
+        ];
+        if (!empty($_GET['root'])) {
+            $synonym['root'] = $_GET['root'];
+        }
+        $aliasName = DB_DATABASE . '_' . $_GET['collection'];
+
+        try {
+            $alias = $this->client->aliases[$aliasName]->retrieve();
+            $collection = $alias['collection_name'];
+            $synonymId = !empty($_GET['id']) ? $_GET['id'] : uniqid();
+            $newSynonym = $this->client->collections[$collection]->synonyms->upsert($synonymId, $synonym);
+        } catch (Exception|\Http\Client\Exception $e) {
+            $this->logger->writeErrorLog("Error while adding/updating synonym", $e);
+            http_response_code(500);
+            exit();
+        }
+
+        $newSynonym['collection'] = $_GET['collection'];
+        return $newSynonym;
+    }
+
+    /**
+     * Deletes a synonym.
+     * The synonym ID is passed via $_GET['id'] and $_GET['collection'].
+     *
+     * @return string The deleted synonym ID
+     */
+    public function deleteSynonym(): string
+    {
+        if (empty($_GET['id']) || empty($_GET['collection'])) {
+            http_response_code(400);
+            exit();
+        }
+
+        $aliasName = DB_DATABASE . '_' . $_GET['collection'];
+
+        try {
+            $alias = $this->client->aliases[$aliasName]->retrieve();
+            $collection = $alias['collection_name'];
+            $this->client->collections[$collection]->synonyms[$_GET['id']]->delete();
+        } catch (Exception|\Http\Client\Exception $e) {
+            $this->logger->writeErrorLog("Error while deleting synonym", $e);
+            http_response_code(500);
+            exit();
+        }
+
+        return $_GET['id'];
+    }
+
+    /**
+     * Gets the list of synonyms.
+     *
+     * @return array
+     */
+    public function getSynonyms(): array
+    {
+        $collectionsSynonyms = [];
+
+        try {
+            $aliases = $this->client->aliases->retrieve();
+            $collections = $this->client->collections->retrieve();
+
+            if (empty($aliases) || empty($aliases['aliases']) || empty($collections)) {
+                return $collectionsSynonyms;
+            }
+
+            foreach ($aliases['aliases'] as $alias) {
+                if (!in_array($alias['name'], self::ZENCART_ALIASES)) {
+                    continue;
+                }
+                $collectionSynonyms = $this->client->collections[$alias['collection_name']]->synonyms->retrieve();
+                $aliasName = str_replace(DB_DATABASE . '_', '', $alias['name']);
+                foreach ($collectionSynonyms['synonyms'] as $synonym) {
+                    $collectionsSynonyms[] = [
+                        'collection' => $aliasName,
+                        'id'         => $synonym['id'],
+                        'synonyms'   => $synonym['synonyms'],
+                        'root'       => $synonym['root'] ?? '',
+                    ];
+                }
+            }
+        } catch (Exception|\Http\Client\Exception $e) {
+            $this->logger->writeErrorLog("Error while retrieving synonyms", $e);
+            http_response_code(500);
+            exit();
+        }
+
+        return $collectionsSynonyms;
     }
 }

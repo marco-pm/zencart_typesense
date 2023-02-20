@@ -1,3 +1,11 @@
+/**
+ * @package  Typesense Plugin for Zen Cart
+ * @author   marco-pm
+ * @version  1.0.0
+ * @see      https://github.com/marco-pm/zencart_typesense
+ * @license  GNU Public License V2.0
+ */
+
 import React from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { CardStatus, ErrorMessageBox, fetchData, LoadingBox } from './dashboard_utils';
@@ -112,11 +120,11 @@ export default function CardSyncStatus () {
                     <Box>
                         {parse(cardText2)}
                     </Box>
-                    {isNextRunFull &&
+                    {isNextRunFull && (
                         <Box>
                             {parse(typesenseI18n['TYPESENSE_DASHBOARD_CARD_SYNC_STATUS_NEXT_RUN_FULL_TEXT'])}
                         </Box>
-                    }
+                    )}
                     <Stack direction='row' justifyContent='space-between' pt={2} fontSize='0.85rem'>
                         <Box>
                             {typesenseI18n['TYPESENSE_DASHBOARD_CARD_SYNC_STATUS_LAST_INCREMENTAL_SYNC_TEXT']}

@@ -12,13 +12,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { Container } from '@mui/material';
 import { grey } from '@mui/material/colors';
-import Box from '@mui/material/Box';
 import Grid from '@mui/material/Unstable_Grid2';
 import ScopedCssBaseline from '@mui/material/ScopedCssBaseline';
 import Typography from '@mui/material/Typography';
 import CardServerStatus from './CardServerStatus';
 import CardSyncStatus from './CardSyncStatus';
 import CardCollections from './CardCollections';
+import CardSynonyms from './CardSynonyms';
 
 declare const typesenseI18n: { [key: string]: string };
 
@@ -81,7 +81,7 @@ const Dashboard = () => {
                                     <CardCollections />
                                 </Grid>
                                 <Grid xs={12} md={6}>
-                                    <Box>temp</Box>
+                                    <CardSynonyms />
                                 </Grid>
                             </Grid>
                         </Container>
