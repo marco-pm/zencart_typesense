@@ -65,6 +65,10 @@ class ScriptedInstaller extends ScriptedInstallBase
 
         $this->createSyncTable();
 
+        // Register admin page
+        zen_deregister_admin_pages(['typesenseDashboard']);
+        zen_register_admin_page('typesenseDashboard', 'BOX_TOOLS_TYPESENSE_DASHBOARD', 'FILENAME_TYPESENSE_DASHBOARD', '', 'tools', 'Y', 2000);
+
         return true;
     }
 
@@ -87,6 +91,8 @@ class ScriptedInstaller extends ScriptedInstallBase
         $sql = "DROP TABLE IF EXISTS " . DB_PREFIX . "typesense_sync_status";
         $this->executeInstallerSql($sql);
 
+        zen_deregister_admin_pages(['typesenseDashboard']);
+
         return true;
     }
 
@@ -98,21 +104,20 @@ class ScriptedInstaller extends ScriptedInstallBase
      */
     protected function createConfigurationSettings(int $configurationGroupId): void
     {
-        // TODO settings descriptions
         $sql = "
             INSERT INTO " . TABLE_CONFIGURATION . "
                 (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, date_added, sort_order, use_function, set_function, val_function)
             VALUES
-                ('Search Engine', 'INSTANT_SEARCH_ENGINE', 'MySQL', 'TODO', $configurationGroupId, now(), 0, NULL, 'zen_cfg_select_option(array(\'MySQL\', \'Typesense\'),', NULL),
+                ('Search Engine', 'INSTANT_SEARCH_ENGINE', 'MySQL', 'The search engine to use for Instant Search.<br>If you choose Typesense, you must first configure its settings (host, port, protocol and key) below.', $configurationGroupId, now(), 0, NULL, 'zen_cfg_select_option(array(\'MySQL\', \'Typesense\'),', NULL),
                 ('[Typesense] Host', 'TYPESENSE_HOST', 'typesense', 'Typesense Host', $configurationGroupId, now(), 5000, NULL, NULL, NULL),
                 ('[Typesense] Port', 'TYPESENSE_PORT', '8108', 'Typesense Port', $configurationGroupId, now(), 5100, NULL, NULL, '{\"error\":\"TEXT_INSTANT_SEARCH_CONFIGURATION_INT_VALIDATE\",\"id\":\"FILTER_VALIDATE_INT\",\"options\":{\"options\":{\"min_range\":0}}}'),
                 ('[Typesense] Protocol', 'TYPESENSE_PROTOCOL', 'http', 'Typesense Protocol', $configurationGroupId, now(), 5200, NULL, 'zen_cfg_select_option(array(\'http\', \'https\'),', NULL),
                 ('[Typesense] Key', 'TYPESENSE_KEY', 'xyz', 'Typesense Key', $configurationGroupId, now(), 5300, NULL, NULL, '{\"error\":\"ERROR\",\"id\":\"FILTER_SANITIZE_URL\",\"options\":{\"options\":{}}}'),
-                ('[Typesense] Full-Sync Collections every (hours)', 'TYPESENSE_FULL_SYNC_FREQUENCY_HOURS', '12', 'TODO', $configurationGroupId, now(), 5400, NULL, NULL, '{\"error\":\"TEXT_INSTANT_SEARCH_CONFIGURATION_INT_VALIDATE\",\"id\":\"FILTER_VALIDATE_INT\",\"options\":{\"options\":{\"min_range\":1}}}'),
-                ('[Typesense] Full-Sync Collections after a Category or Brand Change', 'TYPESENSE_FULL_SYNC_AFTER_CATEGORY_BRAND_CHANGE', 'true', 'TODO', $configurationGroupId, now(), 5500, NULL, 'zen_cfg_select_option(array(\'true\', \'false\'),', NULL),
-                ('[Typesense] Sync Collections even if the last Sync did not complete successfully', 'TYPESENSE_SYNC_AFTER_FAILED', 'true', 'TODO', $configurationGroupId, now(), 5600, NULL, 'zen_cfg_select_option(array(\'true\', \'false\'),', NULL),
-                ('[Typesense] Sync Timeout (minutes)', 'TYPESENSE_SYNC_TIMEOUT_MINUTES', '30', 'TODO', $configurationGroupId, now(), 5700, NULL, NULL, '{\"error\":\"TEXT_INSTANT_SEARCH_CONFIGURATION_INT_VALIDATE\",\"id\":\"FILTER_VALIDATE_INT\",\"options\":{\"options\":{\"min_range\":1}}}'),
-                ('[Typesense] Enable Sync Log', 'TYPESENSE_ENABLE_SYNC_LOG', 'false', 'TODO', $configurationGroupId, now(), 5800, NULL, 'zen_cfg_select_option(array(\'true\', \'false\'),', NULL)
+                ('[Typesense] Full-Sync Collections every (hours)', 'TYPESENSE_FULL_SYNC_FREQUENCY_HOURS', '12', 'Every how many hours a new Full-Sync will be performed. Maximum recommended value is 24 hours (run it at least once a day).', $configurationGroupId, now(), 5400, NULL, NULL, '{\"error\":\"TEXT_INSTANT_SEARCH_CONFIGURATION_INT_VALIDATE\",\"id\":\"FILTER_VALIDATE_INT\",\"options\":{\"options\":{\"min_range\":1}}}'),
+                ('[Typesense] Full-Sync Collections after a Category Change', 'TYPESENSE_FULL_SYNC_AFTER_CATEGORY_CHANGE', 'true', 'Trigger a Full-Sync when a category is created, updated or deleted.', $configurationGroupId, now(), 5500, NULL, 'zen_cfg_select_option(array(\'true\', \'false\'),', NULL),
+                ('[Typesense] Sync Collections even if the last Sync did not complete successfully', 'TYPESENSE_SYNC_AFTER_FAILED', 'true', 'Sync Collections even if the last Sync did not complete successfully. If set to <em>False</em>, after a failed sync no more syncs will be performed until a new Full-Sync will be manually launched (through the Typesense Dashboard).', $configurationGroupId, now(), 5600, NULL, 'zen_cfg_select_option(array(\'true\', \'false\'),', NULL),
+                ('[Typesense] Sync Timeout (minutes)', 'TYPESENSE_SYNC_TIMEOUT_MINUTES', '30', 'Maximum number of minutes allowed for the sync process to complete. If the sync\'s duration reaches the timeout, the process will be aborted.', $configurationGroupId, now(), 5700, NULL, NULL, '{\"error\":\"TEXT_INSTANT_SEARCH_CONFIGURATION_INT_VALIDATE\",\"id\":\"FILTER_VALIDATE_INT\",\"options\":{\"options\":{\"min_range\":1}}}'),
+                ('[Typesense] Enable Sync Log', 'TYPESENSE_ENABLE_SYNC_LOG', 'false', 'Enable the Sync log.', $configurationGroupId, now(), 5800, NULL, 'zen_cfg_select_option(array(\'true\', \'false\'),', NULL)
         ";
         $this->executeInstallerSql($sql);
     }

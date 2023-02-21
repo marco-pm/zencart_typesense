@@ -40,24 +40,27 @@ class zcObserverTypesenseObserver extends base
                 TypesenseZenCart::addProductsIdToBeDeleted($productId);
                 break;
 
-            // Trigger a full-sync when:
-            // - a category is created or updated
-            // - a category is deleted
-            // - a language is created or deleted
-            //
-            // Note: there are other admin events that should trigger a full-sync, but as of ZC158 they don't have a
+            // Trigger a Full-Sync when a category is created, updated or deleted
+            case 'NOTIFY_ADMIN_CATEGORIES_UPDATE_OR_INSERT_FINISH':
+            case 'NOTIFIER_ADMIN_ZEN_REMOVE_CATEGORY':
+                if (TYPESENSE_FULL_SYNC_AFTER_CATEGORY_CHANGE === 'true') {
+                    TypesenseZenCart::setFullSyncGraceful();
+                }
+                break;
+
+            // Trigger a Full-Sync when a language is created or deleted
+            case 'NOTIFY_ADMIN_LANGUAGE_INSERT':
+            case 'NOTIFY_ADMIN_LANGUAGE_DELETE':
+                TypesenseZenCart::setFullSyncGraceful();
+                break;
+
+            // Note: there are other admin events that should trigger a Full-Sync, but as of ZC158 they don't have a
             // notifier:
             // - a category status is changed
             // - a category is moved
             // - a manufacturer is created/updated/deleted
             // - a currency is created/updated/deleted
             // - a language is updated
-            case 'NOTIFY_ADMIN_CATEGORIES_UPDATE_OR_INSERT_FINISH':
-            case 'NOTIFIER_ADMIN_ZEN_REMOVE_CATEGORY':
-            case 'NOTIFY_ADMIN_LANGUAGE_INSERT':
-            case 'NOTIFY_ADMIN_LANGUAGE_DELETE':
-                TypesenseZenCart::setFullSyncGraceful();
-                break;
 
             default:
                 break;

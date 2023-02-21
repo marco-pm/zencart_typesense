@@ -125,8 +125,8 @@ class zcAjaxAdminTypesenseDashboard extends base
     }
 
     /**
-     * Sets the next sync to be a full-sync.
-     * If $_GET['isForced'] is set to false, the next sync will be a graceful full-sync.
+     * Sets the next sync to be a Full-Sync.
+     * If $_GET['isForced'] is set to false, the next sync will be a graceful Full-Sync.
      *
      * @return void
      */
