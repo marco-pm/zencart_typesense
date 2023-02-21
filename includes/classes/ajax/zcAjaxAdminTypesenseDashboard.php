@@ -156,6 +156,10 @@ class zcAjaxAdminTypesenseDashboard extends base
                 return $collectionsNoOfDocuments;
             }
 
+            usort($aliases['aliases'], function ($a, $b) {
+                return strcmp($a['collection_name'], $b['collection_name']);
+            });
+
             foreach ($aliases['aliases'] as $alias) {
                 if (!in_array($alias['name'], self::ZENCART_ALIASES)) {
                     continue;
