@@ -43,6 +43,14 @@ class ScriptedInstaller extends ScriptedInstallBase
             return false;
         }
 
+        // Check that the plugin vendor folder is present and not empty
+        $vendorFolder = __DIR__ . '/../vendor';
+        if (!is_dir($vendorFolder) || count(scandir($vendorFolder)) <= 2) {
+            $errorMsg = '<code>vendor</code> directory not found. Please download/install the vendor files first, as described in the Typesense plugin readme.';
+            $this->errorContainer->addError(1, $errorMsg, true, $errorMsg);
+            return false;
+        }
+
         $sql = $this->dbConn->Execute("
             SELECT
                 configuration_group_id
