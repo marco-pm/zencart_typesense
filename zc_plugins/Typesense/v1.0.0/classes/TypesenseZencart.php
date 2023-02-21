@@ -478,8 +478,14 @@ class TypesenseZencart
      */
     protected function copySynonyms(string $aliasName, string $newCollectionName): void
     {
-        $collectionName = ($this->client->aliases[$aliasName]->retrieve())['collection_name'];
-        $synonyms = $this->client->collections[$collectionName]->synonyms->retrieve();
+        try {
+            $collectionName = $this->client->aliases[$aliasName]->retrieve();
+        } catch (ObjectNotFound $e) {
+            // If the Full-Sync is run for the first time, the alias doesn't exist yet
+            return;
+        }
+
+        $synonyms = $this->client->collections[$collectionName['collection_name']]->synonyms->retrieve();
         foreach ($synonyms['synonyms'] as $synonym) {
             $this->client->collections[$newCollectionName]->synonyms->upsert($synonym['id'], $synonym);
         }
