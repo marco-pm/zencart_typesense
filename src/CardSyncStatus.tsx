@@ -153,7 +153,7 @@ export default function CardSyncStatus () {
                         <Button
                             variant='contained'
                             color='secondary'
-                            disabled={isNextRunFull || forceSyncButtonDisabled}
+                            disabled={forceSyncButtonDisabled}
                             onClick={() => setSyncFull.mutate(true)}
                         >
                             {typesenseI18n['TYPESENSE_DASHBOARD_CARD_SYNC_STATUS_FORCE_SYNC_BUTTON_TEXT']}

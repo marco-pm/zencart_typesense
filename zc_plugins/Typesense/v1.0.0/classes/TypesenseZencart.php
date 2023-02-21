@@ -26,17 +26,17 @@ use Zencart\Plugins\Catalog\Typesense\Exceptions\TypesenseIndexProductsException
 class TypesenseZencart
 {
     /**
-     * The Typesense products collection name.
+     * The Typesense products collection name (alias).
      */
     public const PRODUCTS_COLLECTION_NAME = DB_DATABASE . "_products";
 
     /**
-     * The Typesense categories collection name.
+     * The Typesense categories collection name (alias).
      */
     public const CATEGORIES_COLLECTION_NAME = DB_DATABASE . "_categories";
 
     /**
-     * The Typesense brands collection name.
+     * The Typesense brands collection name (alias).
      */
     public const BRANDS_COLLECTION_NAME = DB_DATABASE . "_brands";
 
@@ -129,10 +129,10 @@ class TypesenseZencart
 
     /**
      * Run the sync process, if it's not already running and other conditions are met.
-     * Run a full-sync if one of the following conditions is true (otherwise, run an incremental-sync):
-     * - the "is_next_run_full" db field is set to 1 (the store owner requested a full-sync through the admin interface,
+     * Run a Full-Sync if one of the following conditions is true (otherwise, run an Incremental-Sync):
+     * - the "is_next_run_full" db field is set to 1 (the store owner requested a Full-Sync through the admin interface,
      *   or there have been changes to categories, brands, languages or currencies)
-     * - the last full-sync completed more than TYPESENSE_FULL_SYNC_FREQUENCY_HOURS hours ago, or has never been launched
+     * - the last Full-Sync completed more than TYPESENSE_FULL_SYNC_FREQUENCY_HOURS hours ago, or has never been launched
      *
      * @return void
      * @throws HttpClientException|TypesenseClientError|\JsonException|TypesenseIndexProductsException
@@ -210,7 +210,7 @@ class TypesenseZencart
     }
 
     /**
-     * Sets the next sync to be a full-sync.
+     * Sets the next sync to be a Full-Sync.
      *
      * @return void
      */
@@ -230,7 +230,7 @@ class TypesenseZencart
     }
 
     /**
-     * Ignores the last sync status and forces the full-sync to run on the next cron run.
+     * Ignores the last sync status and forces the Full-Sync to run on the next cron run.
      *
      * @return void
      */
@@ -302,7 +302,7 @@ class TypesenseZencart
     {
         global $db;
 
-        $this->writeSyncLog('--- Starting full-sync of Typesense collections ---');
+        $this->writeSyncLog('--- Starting Full-Sync of Typesense collections ---');
 
         $sql = "
             UPDATE
@@ -322,6 +322,9 @@ class TypesenseZencart
             $this->writeSyncLog('Begin indexing products collection ' . $productsCollectionName);
             $this->indexProductsCollection($productsCollectionName, true);
             $this->writeSyncLog('End indexing products collection ' . $productsCollectionName);
+            $this->writeSyncLog('Copying products collection synonyms ' . $productsCollectionName);
+            $this->copySynonyms(self::PRODUCTS_COLLECTION_NAME, $productsCollectionName);
+            $this->writeSyncLog('End copying products collection synonyms ' . $productsCollectionName);
             $this->writeSyncLog('Updating products alias ' . $productsCollectionName);
             $this->updateAlias(self::PRODUCTS_COLLECTION_NAME, $productsCollectionName);
 
@@ -330,6 +333,8 @@ class TypesenseZencart
             $this->createCategoriesCollection($categoriesCollectionName);
             $this->writeSyncLog('Indexing categories collection ' . $categoriesCollectionName);
             $this->indexFullCategoriesCollection($categoriesCollectionName);
+            $this->writeSyncLog('Copying categories collection synonyms ' . $categoriesCollectionName);
+            $this->copySynonyms(self::CATEGORIES_COLLECTION_NAME, $categoriesCollectionName);
             $this->writeSyncLog('Updating categories alias ' . $categoriesCollectionName);
             $this->updateAlias(self::CATEGORIES_COLLECTION_NAME, $categoriesCollectionName);
 
@@ -338,6 +343,8 @@ class TypesenseZencart
             $this->createBrandsCollection($brandsCollectionName);
             $this->writeSyncLog('Indexing brands collection ' . $brandsCollectionName);
             $this->indexFullBrandsCollection($brandsCollectionName);
+            $this->writeSyncLog('Copying brands collection synonyms ' . $brandsCollectionName);
+            $this->copySynonyms(self::BRANDS_COLLECTION_NAME, $brandsCollectionName);
             $this->writeSyncLog('Updating brands alias ' . $brandsCollectionName);
             $this->updateAlias(self::BRANDS_COLLECTION_NAME, $brandsCollectionName);
         } catch (\Exception $e) {
@@ -383,7 +390,7 @@ class TypesenseZencart
     {
         global $db;
 
-        $this->writeSyncLog('--- Starting incremental-sync of Typesense products collection ---');
+        $this->writeSyncLog('--- Starting Incremental-Sync of Typesense products collection ---');
 
         $sql = "
             UPDATE
@@ -399,7 +406,7 @@ class TypesenseZencart
         try {
             $productsCollectionName = $this->client->aliases[self::PRODUCTS_COLLECTION_NAME]->retrieve();
         } catch (ObjectNotFound $e) {
-            $this->writeSyncLog('ERROR: alias ' . self::PRODUCTS_COLLECTION_NAME . ' not found. Run a full-sync to create it. Exiting...');
+            $this->writeSyncLog('ERROR: alias ' . self::PRODUCTS_COLLECTION_NAME . ' not found. Run a Full-Sync to create it. Exiting...');
             $this->writeSyncLog('--- Incremental-sync failed ---');
             return;
         }
@@ -462,6 +469,23 @@ class TypesenseZencart
     }
 
     /**
+     * Copies the synonyms from the old collection to the new one.
+     *
+     * @param string $aliasName
+     * @param string $newCollectionName
+     * @return void
+     * @throws HttpClientException|TypesenseClientError
+     */
+    protected function copySynonyms(string $aliasName, string $newCollectionName): void
+    {
+        $collectionName = ($this->client->aliases[$aliasName]->retrieve())['collection_name'];
+        $synonyms = $this->client->collections[$collectionName]->synonyms->retrieve();
+        foreach ($synonyms['synonyms'] as $synonym) {
+            $this->client->collections[$newCollectionName]->synonyms->upsert($synonym['id'], $synonym);
+        }
+    }
+
+    /**
      * Indexes the product documents.
      * If $fullSync is false, only the products that have been created/updated/deleted since the last sync are indexed.
      *
@@ -488,7 +512,7 @@ class TypesenseZencart
                 $lastSyncStartTime = $db->Execute($sql)->fields['last_full_sync_start_time'];
             }
             if (!$lastSyncStartTime) {
-                throw new TypesenseIndexProductsException('Last sync start time not found. Run a full-sync first.');
+                throw new TypesenseIndexProductsException('Last sync start time not found. Run a Full-Sync first.');
             }
         }
 
