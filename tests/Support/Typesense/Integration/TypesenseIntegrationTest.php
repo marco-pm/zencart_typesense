@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Tests\Typesense\Integration;
 
 use Composer\Autoload\ClassLoader;
+use PHPUnit\Framework\MockObject\MockObject;
 use Tests\Support\Traits\DatabaseConcerns;
 use Tests\Support\zcUnitTestCase;
 
@@ -19,7 +20,7 @@ class TypesenseIntegrationTest extends zcUnitTestCase
 {
     use DatabaseConcerns;
 
-    protected $typesenseZencartMock;
+    protected MockObject $typesenseZencartMock;
 
     public array $databaseFixtures = [
         'typesenseSyncStatus' => ['typesense_sync_status'],

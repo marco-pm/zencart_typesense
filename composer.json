@@ -1,6 +1,6 @@
 {
     "name": "marco-pm/zencart-typesense",
-    "description": "Typesense integration for Zen Cart (Add-on for Instant Search plugin)",
+    "description": "Typesense integration for Zen Cart (Instant Search plugin add-on).",
     "homepage": "https://github.com/marco-pm/zencart_typesense",
     "license": "GPL-2.0",
     "authors": [

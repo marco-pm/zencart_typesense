@@ -1,3 +1,11 @@
+/**
+ * @package  Typesense Plugin for Zen Cart
+ * @author   marco-pm
+ * @version  1.0.0
+ * @see      https://github.com/marco-pm/zencart_typesense
+ * @license  GNU Public License V2.0
+ */
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchData, ErrorMessageBox, CardStatus, LoadingBox } from './dashboard_utils';

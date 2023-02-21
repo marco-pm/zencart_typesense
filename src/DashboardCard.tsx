@@ -1,9 +1,17 @@
+/**
+ * @package  Typesense Plugin for Zen Cart
+ * @author   marco-pm
+ * @version  1.0.0
+ * @see      https://github.com/marco-pm/zencart_typesense
+ * @license  GNU Public License V2.0
+ */
+
 import React from 'react';
 import Card from '@mui/material/Card';
 import CardHeader from '@mui/material/CardHeader';
 import CardContent from '@mui/material/CardContent';
-import Stack from "@mui/material/Stack";
-import { CardStatus, CardStatusInfo } from "./dashboard_utils";
+import Stack from '@mui/material/Stack';
+import { CardStatus, CardStatusInfo } from './dashboard_utils';
 
 interface DashboardCardProps {
     cardIcon: JSX.Element;
