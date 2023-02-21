@@ -269,7 +269,7 @@ export default function CardSynonyms () {
             cardContent =
                 <Stack width='100%' spacing={2}>
                     {!editingSynonym && (
-                        <Box>
+                        <Box textAlign='center'>
                             <Button
                                 variant='contained'
                                 color='secondary'

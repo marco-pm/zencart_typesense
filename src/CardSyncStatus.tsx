@@ -141,7 +141,7 @@ export default function CardSyncStatus () {
                             {syncStatusQuery.data.last_full_sync_end_time ?? 'never'}
                         </Box>
                     </Stack>
-                    <Stack pt={2} direction='row' spacing={2}>
+                    <Stack pt={2} direction='row' spacing={2} justifyContent='center'>
                         <Button
                             variant='contained'
                             color='secondary'
