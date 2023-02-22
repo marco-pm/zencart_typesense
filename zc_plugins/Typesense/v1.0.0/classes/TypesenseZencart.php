@@ -680,7 +680,7 @@ class TypesenseZencart
         foreach ($categories as $category) {
             $categoryData['id'] = (string)$category['categories_id'];
             $categoryData['image'] = $category['categories_image'] ?? '';
-            $categoryData['products-count'] = zen_count_products_in_category($category['categories_id']);
+            $categoryData['products-count'] = $this->countProductsInCategory((int)$category['categories_id']);
 
             foreach ($this->languages as $language) {
                 $categoryAdditionalData = $db->Execute("
@@ -971,6 +971,53 @@ class TypesenseZencart
         }
 
         return $parentCategories;
+    }
+
+    /**
+     * Returns the number of products in the given category.
+     * Note: it's the same as the function zen_count_products_in_category(), but because the function is loaded
+     * differently in ZC157 vs ZC158, we're adding it here too in order to avoid issues when running the typesense
+     * sync via crontab.
+     *
+     * @param int $categoryId
+     * @return int
+     */
+    private function countProductsInCategory(int $categoryId): int
+    {
+        global $db;
+
+        $productsCount = 0;
+
+        $sql = "
+            SELECT
+                count(*) AS total
+            FROM
+                " . TABLE_PRODUCTS . " p
+                LEFT JOIN " . TABLE_PRODUCTS_TO_CATEGORIES . " p2c ON p.products_id = p2c.products_id
+            WHERE
+                p2c.categories_id = :categories_id
+                AND p.products_status = 1
+        ";
+
+        $sql = $db->bindVars($sql, ':categories_id', $categoryId, 'integer');
+        $products = $db->Execute($sql);
+        $productsCount += (int)$products->fields['total'];
+
+        $sql = "
+            SELECT
+                categories_id
+            FROM
+                " . TABLE_CATEGORIES . "
+            WHERE
+                parent_id = :categories_id
+        ";
+        $sql = $db->bindVars($sql, ':categories_id', $categoryId, 'integer');
+        $childCategories = $db->Execute($sql);
+        foreach ($childCategories as $childCategory) {
+            $productsCount += $this->countProductsInCategory((int)$childCategory['categories_id']);
+        }
+
+        return $productsCount;
     }
 
     /**
