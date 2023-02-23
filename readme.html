@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Typesense plugin (Instant Search add-on) for Zen Cart</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        #navbar-contents {
+            z-index: -1;
+            position: static;
+        }
+
+        #main-container {
+            padding-top: 120px;
+        }
+
+        @media (min-width: 768px) {
+            #navbar-contents {
+                position: fixed;
+                z-index: initial;
+                max-width: 200px;
+            }
+        }
+
+        @media (min-width: 992px) {
+            #navbar-contents {
+                max-width: 300px;
+            }
+        }
+
+        .nav-pills .nav-link.active {
+            background-color: #6e7581;
+        }
+    </style>
+</head>
+<body data-bs-spy="scroll" data-bs-target="#navbar-contents" data-bs-offset="100">
+    <header>
+        <nav id="navbar-header" class="navbar position-fixed navbar-light bg-light shadow-sm justify-content-center align-items-center container-fluid py-3">
+            <div class="container">
+            <h1 class="mb-1 fs-4">Typesense plugin 1.0 (Instant Search add-on) for Zen Cart 1.5.7 and 1.5.8</h1>
+                <div class="float-md-right text-center text-md-right mt-2 mt-md-0">
+                    <i class="bi-github me-1 align-top"></i> <a href="https://github.com/marco-pm/zencart_typesense" target="_blank" class="link-secondary text-decoration-none me-4">GitHub Repository</a>
+                    <i class="bi-layout-text-sidebar-reverse me-1 align-top"></i> <a href="https://www.zen-cart.com/showthread.php?189289-Instant-Search" target="_blank" class="link-secondary text-decoration-none">Support Thread</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container mb-5" id="main-container">
+        <div class="row">
+            <aside class="col-md-4 col-xxl-3">
+                <nav id="navbar-contents" class="navbar navbar-light bg-light flex-column align-items-stretch p-3 shadow-sm mt-4 mt-sm-3 mb-3 my-md-0">
+                    <nav class="nav nav-pills flex-column">
+                        <a class="nav-link link-secondary" href="#item-introduction">Introduction</a>
+                        <a class="nav-link link-secondary" href="#item-prerequisites">Prerequisites</a>
+                        <a class="nav-link link-secondary" href="#item-typesense-setup">Setting up the Typesense server</a>
+                        <a class="nav-link link-secondary" href="#item-installation">Installation</a>
+                        <a class="nav-link link-secondary" href="#item-configuration">Configuration</a>
+                        <a class="nav-link link-secondary" href="#item-sync-process">The Sync process</a>
+                        <nav class="nav nav-pills flex-column">
+                            <a class="nav-link link-secondary ms-3 my-1" href="#item-full-sync">Full-Sync</a>
+                            <a class="nav-link link-secondary ms-3 my-1" href="#item-incremental-sync">Incremental-Sync</a>
+                            <a class="nav-link link-secondary ms-3 my-1" href="#sync-issues-troubleshoothing">Troubleshooting sync issues</a>
+                        </nav>
+                        <a class="nav-link link-secondary" href="#item-synonyms">Synonyms</a>
+                        <a class="nav-link link-secondary" href="#item-faq">FAQs & Troubleshooting</a>
+                        <a class="nav-link link-secondary" href="#item-list-of-notifiers">(For developers) List of Notifiers</a>
+                        <a class="nav-link link-secondary" href="#item-uninstall">Uninstall</a>
+                        <a class="nav-link link-secondary" href="#item-files-list">Files list</a>
+                        <a class="nav-link link-secondary" href="#item-changelog">Changelog</a>
+                    </nav>
+                </nav>
+            </aside>
+            <article class="col-md-8 col-xxl-9 mt-4 mt-md-0 ps-md-4">
+                <section>
+                    <h1 id="item-introduction" class="display-1 fs-2 pb-2">Introduction</h1>
+                    <p>This plugin is an add-on for the <a href="https://github.com/marco-pm/zencart_instantsearch" target="_blank" class="link-secondary">Instant Search plugin</a> and allows to use <a href="https://typesense.org/" target="_blank" class="link-secondary">Typesense</a> as a search engine (in place of MySQL).</p>
+                    <ul>
+                        <li>Faster searches and more accurate results than MySQL, including typo tolerance and synonyms.</li>
+                        <li>Automatic synchronization of the Zen Cart catalog (products, categories an brands) with Typesense.</li>
+                        <li>Includes a basic dashboard in the Zen Cart admin to monitor sync status, view Typesense server status and collections, and manage synonyms.</li>
+                        <li>Automatic fallback to MySQL if the Typesense server is not available.</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h1 id="item-prerequisites" class="display-1 fs-2 pb-2 pt-4">Prerequisites</h1>
+                    <ul class="mt-3">
+                        <li>Zen Cart 1.5.7 or 1.5.8</li>
+                        <li class="mt-1">PHP 7.4 through 8.2</li>
+                        <li class="mt-1">Instant Search plugin 4.0.0 or later</li>
+                        <li class="mt-1">Typesense server 0.24.0 or later</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h1 id="item-typesense-setup" class="display-1 fs-2 pb-2 pt-4">Setting up the Typesense server</h1>
+                    <p><em>Please note that this plugin is not sponsored by or affiliated with Typesense in any way. Installing Typesense is out of the scope of this documentation, if you need help with that, please refer to the <a href="https://typesense.org/docs/guide/" target="_blank" class="link-secondary">Typesense guide</a>. The following is just a quick guide to get you started.</em></p>
+                    <p>This plugin requires a Typesense server to connect to. You can choose between self-hosting or using Typesense Cloud.</p>
+                    <ul>
+                        <li>Self-hosting Typesense is free, but requires some minimal technical knowledge. You can't run it on shared hosting, you need a VPS or a dedicated server with root access (it can be the same server you run Zen Cart on). Refer to the <a href="https://typesense.org/docs/guide/install-typesense.html" target="_blank" class="link-secondary">Typesense guide</a> for how to install and run Typesense.</li>
+                        <li>Using <a href="https://cloud.typesense.org/" target="_blank" class="link-secondary">Typesense Cloud</a> requires no technical knowledge, and it takes only a few minutes to set-up. Unlike self-hosting, it's not free, but it's very affordable and you can start with a free trial.</li>
+                    </ul>
+                    <p>The Typesense server must be accessible from Zen Cart on the port exposed by Typesense (default is 8108). If you're running Typesense on a different server, you'll need to configure the firewall to allow access from the Zen Cart server.<br>If you're using Docker, you can use an internal network to allow access from Zen Cart to Typesense, without exposing the port to the outside world.</p>
+                    <p>The plugin will require the Typesense server URL, protocol, port and API key to connect to it. Read more <a href="https://typesense.org/docs/0.24.0/api/authentication.html" target="_blank" class="link-secondary">here</a>.<br>The key must be an admin key, i.e. with full privileges. It's recommended to create a dedicated key for the plugin and not to use the default bootstrap API key (the initial bootstrap key that you started Typesense with).<br>The key is never revealed on the client side, so it's safe to use an admin key. Also, all the operations that are not a search are performed only in the Zen Cart admin.</p>
+                </section>
+
+                <section>
+                    <h1 id="item-installation" class="display-1 fs-2 pb-2 pt-4">Installation</h1>
+                    <ol>
+                        <li class="mt-2">Make sure that the Typesense server is running and accessible from Zen Cart.</li>
+                        <li class="mt-2">Make sure that the Instant Search plugin version 4 or higher is installed and properly configured (search for something and checks that the results are displayed in the dropdown and/or results page).</li>
+                        <li class="mt-2">
+                            Copy the <a href="#item-files-list" class="link-secondary">plugin files</a> to your site's file system.<br>
+                            Rename <span class="font-monospace">YOUR_ADMIN</span> to match the name of your admin directory.<br>
+                            DON'T rename any subdirectory under <span class="font-monospace">zc_plugins/Typesense/v1.0.0</span>.
+                        </li>
+                        <li class="mt-2"><strong>Important:</strong> copy the vendor files to your site's file system. These files are not included in the plugin package, you must download them separately in one of the following ways:
+                            <ul class="text-break mt-2">
+                                <li class="mt-2">In the <a href="https://github.com/marco-pm/zencart_typesense/releases" target="_blank" class="link-secondary">releases</a> page on GitHub, attached to the release there is a zipped file called <span class="font-monospace">vendor-files-100.zip</span>. Download it and extract the files. In the end you should have a directory called <span class="font-monospace">vendor</span> under <span class="font-monospace">zc_plugins/Typesense/v1.0.0</span>.</li>
+                                <li class="mt-2">OR, install composer, copy <span class="font-monospace">composer.json</span> and <span class="font-monospace">composer.lock</span> from the home directory of the GitHub repository to <span class="font-monospace">zc_plugins/Typesense/v1.0.0</span> and run <span class="font-monospace">composer install</span> from the command line in that directory.</li>
+                            </ul>
+                        </li>
+                        <li class="mt-2">Install the plugin via the Plugin Manager: in the Admin, go to <em>Modules > Plugin Manager</em>, select <em>Typesense</em> and click the <em>Install</em> button.</li>
+                        <li class="mt-2">You will now find additional options under <em>Configuration > Instant Search</em>. Insert your Typesense server URL, protocol, port and API key, then select Typesense as Search Engine.</li>
+                        <li class="mt-2">Open the Typesense Dashboard under the <em>Tools</em> menu. If the <em>Server Status</em> card is green, the connection to Typesense is working.<br>If it's yellow, there's a problem with the connection: check your configuration and the error logs in the <span class="font-monospace">/logs</span> directory.
+                        <li class="mt-2">
+                            If the connection is working, schedule a cron job every 5 minutes to run the sync process:<br>
+                            <span class="font-monospace">php &lt;FULL_PATH_TO_ADMIN&gt;/typesense_cron.php</span><br>
+                            where <span class="font-monospace">&lt;FULL_PATH_TO_ADMIN&gt;</span> is the full path to the admin directory on your server. The method to schedule a cron job depends on your server configuration, refer to your hosting provider's documentation.
+                        </li>
+                        <li class="mt-2">When the first run of the cron job starts, a Full-Sync will be performed. This will take a while, depending on the number of products in your store. You can check if the sync is complete by looking at the <em>Sync Status</em> card in the Typesense Dashboard.<br>If the sync fails, troubleshoot the problem as described in <a href="#item-sync-process" class="link-secondary">The Sync process</a>.</li>
+                        <li class="mt-2">After the first sync is complete, you can start using the search.</li>
+                    </ol>
+                </section>
+
+                <section>
+                    <h1 id="item-configuration" class="display-1 fs-2 mt-6 pb-2 pt-4">Configuration</h1>
+                    <p>All the "base" Instant Search plugin settings, including <em>Product Fields to Search and Order</em>, are valid for Typesense as well. See the <a href="https://htmlpreview.github.io/?https://github.com/marco-pm/zencart_instantsearch/blob/main/readme.html" target="_blank" class="link-secondary">Instant Search readme</a> for more information.</p>
+                    <p>The following are the Typesense-specific settings available under <em>Configuration > Instant Search</em>.</p>
+                    <table class="table table-striped mb-5">
+                        <thead>
+                            <tr>
+                                <th scope="col">Setting</th>
+                                <th scope="col">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th class="align-middle" scope="row">Search Engine</th>
+                                <td class="align-middle">
+                                    <p class="mb-1">The search engine to use for Instant Search.<br>If you choose Typesense, you must first configure its settings (host, port, protocol and key).</p>
+                                    <p class="mb-0">Default: <span class="font-monospace text-break">MySQL</span></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="align-middle" scope="row">Typesense Host</th>
+                                <td class="align-middle">
+                                    <p class="mb-1">Typesense Hostname.</p>
+                                    <p class="mb-0">Default: <span class="font-monospace">typesense</span></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="align-middle" scope="row">Typesense Port</th>
+                                <td class="align-middle">
+                                    <p class="mb-1">Typesense Port.</p>
+                                    <p class="mb-0">Default: <span class="font-monospace">8108</span></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="align-middle" scope="row">Typesense Protocol</th>
+                                <td class="align-middle">
+                                    <p class="mb-1">Typesense Protocol (http or https).</p>
+                                    <p class="mb-0">Default: <span class="font-monospace">http</span></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="align-middle" scope="row">Typesense Key</th>
+                                <td class="align-middle">
+                                    <p class="mb-1">Typesense Key.</p>
+                                    <p class="mb-0">Default: <span class="font-monospace">xyz</span></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="align-middle" scope="row">Full-Sync Collections every (hours)</th>
+                                <td class="align-middle">
+                                    <p class="mb-1">Every how many hours a new Full-Sync will be performed. Maximum recommended value is 24 hours (run it at least once a day).</p>
+                                    <p class="mb-0">Default: <span class="font-monospace">12</span></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="align-middle" scope="row">Full-Sync Collections after a Category Change</th>
+                                <td class="align-middle">
+                                    <p class="mb-1">Trigger a Full-Sync when a category is created, updated or deleted.</p>
+                                    <p class="mb-0">Default: <span class="font-monospace">true</span></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="align-middle" scope="row">Sync Collections even if the last Sync did not complete successfully</th>
+                                <td class="align-middle">
+                                    <p class="mb-1">Sync Collections even if the last Sync did not complete successfully. If set to <em>False</em>, after a failed sync no more syncs will be performed until a new Full-Sync will be manually launched (through the Typesense Dashboard).</p>
+                                    <p class="mb-0">Default: <span class="font-monospace">true</span></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="align-middle" scope="row">Sync Timeout (minutes)</th>
+                                <td class="align-middle">
+                                    <p class="mb-1">Maximum number of minutes allowed for the sync process to complete. If the sync's duration reaches the timeout, the process will be aborted.</p>
+                                    <p class="mb-0">Default: <span class="font-monospace">30</span></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="align-middle" scope="row">Enable Sync Log</th>
+                                <td class="align-middle">
+                                    <p class="mb-1">Enable the Sync log.</p>
+                                    <p class="mb-0">Default: <span class="font-monospace">false</span></p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section>
+                    <h1 id="item-sync-process" class="display-1 fs-2 mt-6 pb-2 pt-4">The Sync process</h1>
+                    <p>Typesense does not perform the search directly on the Zen Cart database, but rather on a local copy of it that is kept in sync (<em>indexing</em>) with the Zen Cart database. This is done by a background process (cron job) that runs every 5 minutes and updates the local copy of the Zen Cart database on Typesense.</p>
+                    <p>The (rough) equivalent of a database table is called a <em>collection</em> in Typesense. The (rough) equivalent of a database row is called a <em>document</em> in Typesense.<br>There are three collections in the Typesense server: <strong>products</strong>, <strong>categories</strong> and <strong>brands</strong> (aka manufacturers). The sync process regularly updates these collections with the latest data from the Zen Cart database. You can see the collections and the number of documents in each collection in the <em>Collections</em> tab of the Typesense dashboard.</p>
+                    <p>Every time the sync process runs, it first decides whether to perform a Full-Sync or an Incremental-Sync.</p>
+
+                    <h2 id="item-full-sync" class="fs-5 pt-3 pb-1">Full-Sync</h2>
+                    <p>The Full-Sync recreates the Typesense collections and re-index all the documents from scratch. This ensures that the local copy of the Zen Cart database on Typesense is completely up-to-date with the Zen Cart database, filling any gaps that may have been left by the Incremental-Sync process due to network issues/failed retries, or by changes in the Zen Cart catalog that require a full re-index.</p>
+                    <p>Thanks to the <em>collection alias</em> feature of Typesense, the Full-Sync process is completely transparent to the Instant Search plugin. The search will continue to work as usual, although some returned results may be out of date until the Full-Sync is completed.</p>
+                    <p>Depending on the number of products, categories and manufacturers in your Zen Cart catalog, the Full-Sync process may take a few minutes to complete. Even if it's transparent, it is resource-intensive and should be performed only once or twice a day, or immediately after changes that require the re-creation of the collection(s). You can control how often the Full-Sync is performed by setting the <em>Full-Sync Collections every (hours)</em> setting.</p>
+                    <p>A Full-Sync is performed:</p>
+                    <ul>
+                        <li>when the sync process runs for the first time</li>
+                        <li>when the <em>Full-Sync Collections every (hours)</em> setting is reached</li>
+                        <li>when the <em>Full-Sync Collections after a Category Change</em> setting is enabled and a category is created, updated or deleted</li>
+                        <li>when a language is created or deleted</li>
+                        <li>when it is scheduled to run by clicking the <em>Graceful Full-Sync</em> or <em>Force Full-Sync</em> buttons in the Typesense Dashboard</li>
+                    </ul>
+                    <p>There are other admin events that should trigger a Full-Sync, but as of Zen Cart 1.5.8 they can't be detected by the plugin (there are no notifiers for them). In the following cases you should manually trigger a Full-Sync through the Typesense Dashboard, or wait for the next scheduled Full-Sync, to get the changes reflected in the search results:</p>
+                    <ul>
+                        <li>a category status is changed</li>
+                        <li>a category is moved</li>
+                        <li>a manufacturer is created/updated/deleted</li>
+                        <li>a currency is created/updated/deleted</li>
+                        <li>a language is updated</li>
+                    </ul>
+
+                    <h2 id="item-incremental-sync" class="fs-5 pt-3 pb-1">Incremental-Sync</h2>
+                    <p>The Incremental-Sync only re-indexes products that have been created, updated or deleted since the last sync. It is therefore much faster than the Full-Sync and should run at least every 5 minutes. Every time the sync process is launched by the cron job it will perform an Incremental-Sync, unless it needs to perform a Full-Sync (see above).</p>
+                    <p>The database fields <span class="font-monospace">products_last_modified</span> and <span class="font-monospace">products_date_added</span> (of the Zen Cart <span class="font-monospace">products</span> table) are used to determine which products have been modified and need to be re-indexed.<br>Every operation on a product made through the Zen Cart admin updates those field by default, thus ensuring that the Incremental-Sync is always up-to-date.<br>If, however, product changes are made directly in the database (e.g. through a script or an external product), without properly updating the date fields, the Incremental-Sync will not be able to detect the changes and the search results will be out of date.</p>
+
+                    <h2 id="sync-issues-troubleshoothing" class="fs-5 pt-3 pb-1">Troubleshooting sync issues</h2>
+                    <p>You can check the status of the sync process at any time in the <em>Sync Status</em> tab of the Typesense Dashboard. You can also enable the Sync log in the configuration settings to view the details of the sync process.</p>
+
+                    <h3 class="fs-6 pt-2 pb-1">Sync not running, or last run completed many hours ago</h3>
+                    <p>If the last sync was completed several hours or days ago, or the sync job isn't running at all, it probably means your cron job isn't working properly. Check your cron job settings and make sure the cron job runs every 5 minutes.</p>
+
+                    <h3 class="fs-6 pt-2 pb-1">Sync process failed</h3>
+                    <p>The sync process will stop as "Failed" if it takes longer than the <em>Sync Timeout (minutes)</em> setting or if an error occurs (such as a network problem preventing the sync process from connecting to the Typesense server).<br>To find the cause of the failed sync, check the sync log (if enabled) and any Typesense error logs in the <em>/logs</em> folder of the Zen Cart catalog.</p>
+                    <p>If the <em>Sync Collections even if the last Sync did not complete successfully</em> setting is set to <em>True</em> (default), the next sync job will run even if the previous one failed. Otherwise, you can manually trigger a new sync job by clicking the <em>Force Full-Sync</em> button in the Typesense Dashboard (note that the job won't start immediately, but only with the next scheduled cron run).</p>
+
+                    <h3 class="fs-6 pt-2 pb-1">Sync process stuck in "Running"</h3>
+                    <p>If the sync process is stuck in the <em>Running</em> state (i.e. it's taking longer than usual) and the sync log is not updating, it probably means that an error occurred during the sync but the process didn't catch it and therefore didn't set the sync as "Failed" (even if the process has been aborted). Check the sync log (if enabled) and any Typesense error logs in the <em>/logs</em> folder of the Zen Cart catalog.<br>To retry the sync, manually trigger a new job by clicking the <em>Force Full-Sync</em> button in the Typesense Dashboard (note that the job won't start immediately, but only with the next scheduled cron run).</p>
+                </section>
+
+                <section>
+                    <h1 id="item-synonyms" class="display-1 fs-2 mt-6 pb-2 pt-4">Synonyms</h1>
+                    <p><em>Note: synonyms apply globally to all products (and categories and brands) in the catalog. If you want to define per-product synonyms, you can use the keywords meta tag field (editable in the Zen Cart admin). More info in the <a href="https://htmlpreview.github.io/?https://github.com/marco-pm/zencart_instantsearch/blob/main/readme.html" target="_blank" class="link-secondary">Instant Search readme</a>.</em></p>
+                    <p>As explained in the <a href="https://typesense.org/docs/0.24.0/api/synonyms.html" target="_blank" class="link-secondary">Typesense guide</a>, the synonyms feature allows you to define search terms that should be considered equivalent. E.g.: when you define a synonym for <em>sneaker</em> as <em>shoe</em>, searching for <em>sneaker</em> will now return all records with the word <em>shoe</em> in them, in addition to records with the word <em>sneaker</em>.</p>
+                    <p>There are two types of synonyms:</p>
+                    <ul>
+                        <li>Multi-way synonyms: defining the words <em>blazer</em>, <em>coat</em> and <em>jacket</em> as multi-way synonyms will cause searches for any one of those words (eg: <em>coat</em>) to return documents containing at least one of the words in the synonym set (eg: records with <em>blazer</em> or <em>coat</em> or <em>jacket</em> are returned).</li>
+                        <li>One-way synonyms: defining the words <em>iphone</em> and <em>android</em> as one-way synonyms of <em>smart phone</em> will cause searches for <em>smart phone</em> to return documents containing <em>iphone</em> or <em>android</em> or both.</li>
+                    </ul>
+                    <p>You can add, edit and delete synonyms in the <em>Synonyms</em> tab of the Typesense Dashboard. Type each synonym in the <em>synonyms</em> input field and press <em>Enter</em> to add it. For one-way synonyms, add also the <em>root</em> word/sentence (<em>smart phone</em> in the above example) in the respective field.</p>
+                </section>
+
+                <section>
+                    <h1 id="item-faq" class="display-1 fs-2 mt-6 pb-2 pt-5">FAQs & Troubleshooting</h1>
+
+                    <h2 class="fs-5 pt-3 pb-1">The Typesense Dashboard says "Error while retrieving data"</h2>
+                    <p>Zen Cart can't connect to the Typesense server. Make sure that the Typesense server is up and running, that it's accessible from the Zen Cart server and that the configuration settings (hostname, protocol, port, key) are correct.</p>
+
+                    <h2 class="fs-5 pt-3 pb-1">The sync is not running / has failed / is stuck in "Running"</h2>
+                    <p>See <a href="#sync-issues-troubleshoothing" class="link-secondary">Troubleshoothing sync issues</a>.</p>
+
+                    <h2 class="fs-5 pt-3 pb-1">The search is working, but there are error logs saying "Typesense search error, falling back to MySQL"</h2>
+                    <p>If a user performs a search and the Typesense server is unavailable, Instant Search will automatically switch to MySQL as the search engine to continue displaying results to the user.<br>Make sure that the Typesense server is up and running, that it's accessible from the Zen Cart server and that the configuration settings (hostname, protocol, port, key) are correct.</p>
+
+                    <h2 class="fs-5 pt-3 pb-1">The sync is running normally but the results are out of date</h2>
+                    <p>Changes to a product (or category or brand) are reflected in the search results only after the next sync job has run. Some less-frequent changes (such as moving a category or editing a manufacturer) requires a Full-Sync. See <a href="#item-sync-process" class="link-secondary">The Sync process</a> for more details.</p>
+
+                    <h2 class="fs-5 pt-3 pb-1">I need more help</h2>
+                    <p>Feel free to ask your question in the <a href="https://www.zen-cart.com/showthread.php?189289-Instant-Search" target="_blank" class="link-secondary">Support Thread</a> on Zen Cart forums.</p>
+                </section>
+
+                <section>
+                    <h1 id="item-list-of-notifiers" class="display-1 fs-2 mt-6 pb-2 pt-5">(For developers) Notifiers list</h1>
+                    <ul>
+                        <li><span class="font-monospace text-break">NOTIFY_INSTANT_SEARCH_TYPESENSE_BEFORE_SEARCH</span> (<span class="font-monospace text-break">TypesenseSearchEngineProvider.php</span>)</li>
+                        <li><span class="font-monospace text-break">NOTIFY_INSTANT_SEARCH_TYPESENSE_BEFORE_RESULTS</span> (<span class="font-monospace text-break">TypesenseSearchEngineProvider.php</span>)</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h1 id="item-uninstall" class="display-1 fs-2 pb-2 pt-4">Uninstall</h1>
+                    <ol>
+                        <li class="mt-2">Uninstall the plugin via the Plugin Manager: in the Admin, go to <em>Modules > Plugin Manager</em>, select <em>Typesense</em> and click the <em>Uninstall</em> button.</li>
+                        <li class="mt-2">Remove the <a href="#item-files-list" class="link-secondary">plugin files</a> from your site's filesystem.
+                    </ol>
+                </section>
+
+                <section>
+                    <h1 id="item-files-list" class="display-1 fs-2 pb-2 pt-4">Files list</h1>
+                        <ul class="mt-2 text-break">
+                            <li><span class="font-monospace">/includes/classes/ajax/zcAjaxAdminTypesenseDashboard.php</span></li>
+                            <li><span class="font-monospace">/YOUR_ADMIN/typesense_cron.php</span></li>
+                            <li><span class="font-monospace">/YOUR_ADMIN/includes/auto_loaders/typesense_cron.core.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/classes/TypesenseZencart.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/classes/SearchEngineProviders/TypesenseSearchEngineProvider.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/classes/TypesenseInstantSearch.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/classes/Exceptions/TypesenseSearchException.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/classes/Exceptions/TypesenseIndexProductsException.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/Installer/ScriptedInstaller.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/admin/includes/classes/observers/auto.TypesenseObserver.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/admin/includes/extra_datafiles/typesense_filenames.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/admin/includes/extra_datafiles/typesense_database_tables.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/admin/includes/languages/english/typesense_dashboard.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/admin/includes/languages/english/lang.typesense_dashboard.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/admin/includes/languages/english/extra_definitions/typesense_dashboard.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/admin/includes/languages/english/extra_definitions/lang.typesense_dashboard.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/admin/typesense_dashboard.php</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/admin/typesense_dashboard.min.js.LICENSE.txt</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/admin/typesense_dashboard.min.js</span></li>
+                            <li><span class="font-monospace">/zc_plugins/Typesense/v1.0.0/manifest.php</span></li>
+                        </ul>
+                </section>
+
+                <section>
+                    <h1 id="item-changelog" class="display-1 fs-2 pb-2 pt-4">Changelog</h1>
+                    <p>See <a href="https://github.com/marco-pm/zencart_typesense/releases" target="_blank" class="link-secondary">releases</a></p>
+                </section>
+            </article>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+</body>
+</html>

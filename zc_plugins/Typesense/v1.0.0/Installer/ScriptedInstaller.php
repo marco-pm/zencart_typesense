@@ -117,7 +117,7 @@ class ScriptedInstaller extends ScriptedInstallBase
                 (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, date_added, sort_order, use_function, set_function, val_function)
             VALUES
                 ('Search Engine', 'INSTANT_SEARCH_ENGINE', 'MySQL', 'The search engine to use for Instant Search.<br>If you choose Typesense, you must first configure its settings (host, port, protocol and key) below.', $configurationGroupId, now(), 0, NULL, 'zen_cfg_select_option(array(\'MySQL\', \'Typesense\'),', NULL),
-                ('[Typesense] Host', 'TYPESENSE_HOST', 'typesense', 'Typesense Host', $configurationGroupId, now(), 5000, NULL, NULL, NULL),
+                ('[Typesense] Host', 'TYPESENSE_HOST', 'typesense', 'Typesense Hostname', $configurationGroupId, now(), 5000, NULL, NULL, NULL),
                 ('[Typesense] Port', 'TYPESENSE_PORT', '8108', 'Typesense Port', $configurationGroupId, now(), 5100, NULL, NULL, '{\"error\":\"TEXT_INSTANT_SEARCH_CONFIGURATION_INT_VALIDATE\",\"id\":\"FILTER_VALIDATE_INT\",\"options\":{\"options\":{\"min_range\":0}}}'),
                 ('[Typesense] Protocol', 'TYPESENSE_PROTOCOL', 'http', 'Typesense Protocol', $configurationGroupId, now(), 5200, NULL, 'zen_cfg_select_option(array(\'http\', \'https\'),', NULL),
                 ('[Typesense] Key', 'TYPESENSE_KEY', 'xyz', 'Typesense Key', $configurationGroupId, now(), 5300, NULL, NULL, '{\"error\":\"ERROR\",\"id\":\"FILTER_SANITIZE_URL\",\"options\":{\"options\":{}}}'),

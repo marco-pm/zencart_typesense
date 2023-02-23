@@ -3,7 +3,7 @@
 return [
     'pluginVersion'     => 'v1.0.0',
     'pluginName'        => 'Typesense',
-    'pluginDescription' => 'Sync the Zen Cart catalog with a Typesense server and Use Typesense as search engine in the Instant Search plugin. Monitor the synchronization through an admin dashboard.',
+    'pluginDescription' => 'Sync the Zen Cart catalog with a Typesense server and use Typesense as search engine in the Instant Search plugin. Monitor the synchronization through an admin dashboard.',
     'pluginAuthor'      => 'marcopm',
     'pluginId'          => 0,
     'zcVersions'        => ['v157', 'v158'],
