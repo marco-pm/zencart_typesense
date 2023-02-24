@@ -25,7 +25,7 @@ allows to use [Typesense](https://typesense.org/) as a search engine (in place o
 See the [readme.html](https://htmlpreview.github.io/?https://github.com/marco-pm/zencart_typesense/blob/main/readme.html).
 
 # Troubleshooting
-[Zen Cart Forum Support Thread](https://www.zen-cart.com/showthread.php?189289-Instant-Search)
+[Zen Cart Forum Support Thread](https://www.zen-cart.com/showthread.php?229326-Typesense-plugin-(Instant-Search-add-on)-Support-Thread)
 
 See also the FAQS & troubleshooting section in the [readme.html](https://htmlpreview.github.io/?https://github.com/marco-pm/zencart_typesense/blob/main/readme.html).
 
