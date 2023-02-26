@@ -6,7 +6,7 @@
  * @license  GNU Public License V2.0
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchData, ErrorMessageBox, CardStatus, LoadingBox } from './dashboard_utils';
 import { HealthResponse } from 'typesense/lib/Typesense/Health';
@@ -20,7 +20,7 @@ import DashboardCard from './DashboardCard';
 declare const typesenseI18n: { [key: string]: string };
 
 export default function CardServerStatus () {
-    const [refetchInterval, setRefetchInterval] = React.useState(5000);
+    const [refetchInterval, setRefetchInterval] = useState(5000);
 
     const healthQuery = useQuery({
         queryKey: ['health'],

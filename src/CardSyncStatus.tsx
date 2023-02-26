@@ -6,7 +6,7 @@
  * @license  GNU Public License V2.0
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { CardStatus, ErrorMessageBox, fetchData, LoadingBox } from './dashboard_utils';
 import parse from 'html-react-parser';
@@ -32,7 +32,7 @@ interface SyncStatus {
 }
 
 export default function CardSyncStatus () {
-    const [refetchInterval, setRefetchInterval] = React.useState(5000);
+    const [refetchInterval, setRefetchInterval] = useState(5000);
 
     const syncStatusQuery = useQuery({
         queryKey: ['syncstatus'],
