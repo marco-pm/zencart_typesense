@@ -1045,6 +1045,13 @@ class TypesenseZencart
         return (float)$productRating->fields['average_rating'];
     }
 
+    /**
+     * Returns the product's name, description, meta tags keywords and total views.
+     *
+     * @param int $productId
+     * @param int $languageId
+     * @return queryFactoryResult
+     */
     private function getProductAdditionalData(int $productId, int $languageId): QueryFactoryResult
     {
         global $db;
@@ -1080,6 +1087,7 @@ class TypesenseZencart
 
     /**
      * Writes a message to the sync log, if enabled.
+     *
      * @param string $message
      * @return void
      */
