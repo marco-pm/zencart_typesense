@@ -6,8 +6,8 @@ This plugin is an add-on for the [Instant Search plugin](https://github.com/marc
 allows to use [Typesense](https://typesense.org/) as a search engine (in place of MySQL).
 
 - Faster searches and more accurate results than MySQL, including typo tolerance and synonyms.
-- Automatic synchronization of the Zen Cart catalog (products, categories an brands) with Typesense.
-- Includes a basic dashboard in the Zen Cart admin to monitor sync status, view Typesense server status and 
+- Automatic synchronization of the Zen Cart catalog (products, categories and brands) with Typesense.
+- Includes a basic dashboard in the Zen Cart admin to monitor the sync status, view Typesense server status and 
   collections, and manage synonyms.
 - Automatic fallback to MySQL if the Typesense server is not available.
 

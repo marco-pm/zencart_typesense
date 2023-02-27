@@ -79,8 +79,8 @@
                     <p>This plugin is an add-on for the <a href="https://github.com/marco-pm/zencart_instantsearch" target="_blank" class="link-secondary">Instant Search plugin</a> and allows to use <a href="https://typesense.org/" target="_blank" class="link-secondary">Typesense</a> as a search engine (in place of MySQL).</p>
                     <ul>
                         <li>Faster searches and more accurate results than MySQL, including typo tolerance and synonyms.</li>
-                        <li>Automatic synchronization of the Zen Cart catalog (products, categories an brands) with Typesense.</li>
-                        <li>Includes a basic dashboard in the Zen Cart admin to monitor sync status, view Typesense server status and collections, and manage synonyms.</li>
+                        <li>Automatic synchronization of the Zen Cart catalog (products, categories and brands) with Typesense.</li>
+                        <li>Includes a basic dashboard in the Zen Cart admin to monitor the sync status, view Typesense server status and collections, and manage synonyms.</li>
                         <li>Automatic fallback to MySQL if the Typesense server is not available.</li>
                     </ul>
                 </section>
@@ -103,7 +103,7 @@
                         <li>Self-hosting Typesense is free, but requires some minimal technical knowledge. You can't run it on shared hosting, you need a VPS or a dedicated server with root access (it can be the same server you run Zen Cart on). Refer to the <a href="https://typesense.org/docs/guide/install-typesense.html" target="_blank" class="link-secondary">Typesense guide</a> for how to install and run Typesense.</li>
                         <li>Using <a href="https://cloud.typesense.org/" target="_blank" class="link-secondary">Typesense Cloud</a> requires no technical knowledge, and it takes only a few minutes to set-up. Unlike self-hosting, it's not free, but it's very affordable and you can start with a free trial.</li>
                     </ul>
-                    <p>The Typesense server must be accessible from Zen Cart on the port exposed by Typesense (default is 8108). If you're running Typesense on a different server, you'll need to configure the firewall to allow access from the Zen Cart server.<br>If you're using Docker, you can use an internal network to allow access from Zen Cart to Typesense, without exposing the port to the outside world.</p>
+                    <p>The Typesense server must be accessible from Zen Cart on the port exposed by Typesense (default is 8108). If you're running Typesense on a different server, you'll need to configure the firewall to allow access from the Zen Cart server.<br>Note that is not required for the Typesense server to be accessible from the browser, because the connection is made from Zen Cart backend with PHP. If you're using Docker and running Typesense on the same server of Zen Cart, you can use an internal network to allow access from Zen Cart to Typesense, without exposing the Typesense port to the outside world.</p>
                     <p>The plugin will require the Typesense server URL, protocol, port and API key to connect to it. Read more <a href="https://typesense.org/docs/0.24.0/api/authentication.html" target="_blank" class="link-secondary">here</a>.<br>The key must be an admin key, i.e. with full privileges. It's recommended to create a dedicated key for the plugin and not to use the default bootstrap API key (the initial bootstrap key that you started Typesense with).<br>The key is never revealed on the client side, so it's safe to use an admin key. Also, all the operations that are not a search are performed only in the Zen Cart admin.</p>
                 </section>
 
