@@ -745,7 +745,9 @@ class TypesenseZencart
             $brandsToImport[] = $brandData;
         }
 
-        $this->client->collections[$brandsCollectionName]->documents->import($brandsToImport, ['action' => 'upsert']);
+        if (!empty($brandsToImport)) {
+            $this->client->collections[$brandsCollectionName]->documents->import($brandsToImport, ['action' => 'upsert']);
+        }
     }
 
     /**
