@@ -701,7 +701,9 @@ class TypesenseZencart
             $categoriesToImport[] = $categoryData;
         }
 
-        $this->client->collections[$categoriesCollectionName]->documents->import($categoriesToImport, ['action' => 'create']);
+        if (!empty($categoriesToImport)) {
+            $this->client->collections[$categoriesCollectionName]->documents->import($categoriesToImport, ['action' => 'create']);
+        }
     }
 
     /**
