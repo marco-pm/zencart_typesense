@@ -60,6 +60,7 @@ export default function CardSyncStatus () {
             />;
         } else {
             const isFirstSync =
+                syncStatusQuery.data.status === 'completed' &&
                 syncStatusQuery.data.last_incremental_sync_end_time === null &&
                 syncStatusQuery.data.last_full_sync_end_time === null;
             const isNextRunFull = syncStatusQuery.data.is_next_run_full === '1';
