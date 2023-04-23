@@ -52,6 +52,7 @@ npm run build-typesense_dashboard
 - Consider implementing an optional "frontend search" mode, i.e. sending the search request directly to the Typesense 
   server with JavaScript, without going through the Zen Cart backend.
 - Add more features to the admin dashboard, e.g. manage curations.
+- Make some low-level search settings configurable in the admin, e.g. [num_typos](https://typesense.org/docs/0.24.1/api/search.html#typo-tolerance-parameters).
 
 # Testing
 Integration tests use the [Test Framework](https://docs.zen-cart.com/dev/testframework/) of Zen Cart 1.5.8. 
