@@ -2,7 +2,7 @@
 /**
  * @package  Typesense Plugin for Zen Cart
  * @author   marco-pm
- * @version  1.0.0
+ * @version  1.0.1
  * @see      https://github.com/marco-pm/zencart_typesense
  * @license  GNU Public License V2.0
  */
@@ -32,7 +32,7 @@ class TypesenseIntegrationTest extends zcUnitTestCase
         parent::setUp();
 
         $classLoader = new ClassLoader();
-        $classLoader->addPsr4("Zencart\\Plugins\\Catalog\\Typesense\\", "zc_plugins/Typesense/v1.0.0/classes/", true);
+        $classLoader->addPsr4("Zencart\\Plugins\\Catalog\\Typesense\\", "zc_plugins/Typesense/v1.0.1/classes/", true);
         $classLoader->register();
 
         define('TABLE_TYPESENSE_SYNC', 'typesense_sync_status');

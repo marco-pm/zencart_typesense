@@ -1,6 +1,6 @@
 {
   "name": "typesense-zen-cart",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Typesense integration for Zen Cart (Instant Search plugin add-on)",
   "scripts": {
     "build-typesense_dashboard-dev": "npx webpack --config-name typesense_dashboard --mode=development",
