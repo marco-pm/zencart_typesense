@@ -19,6 +19,18 @@ class ScriptedInstaller extends ScriptedInstallBase
     protected const CONFIGURATION_GROUP_TITLE = 'Instant Search';
 
     /**
+     * Upgrade the plugin to the new version.
+     *
+     * @param string $oldVersion
+     * @return bool
+     */
+    public function doUpgrade(string $oldVersion = ''): bool
+    {
+        // Do nothing for now
+        return true;
+    }
+
+    /**
      * Install the plugin for the first time.
      *
      * @return bool
