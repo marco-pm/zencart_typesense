@@ -309,6 +309,9 @@
 
                     <h3 class="fs-6 pt-2 pb-1">Sync process stuck in "Running"</h3>
                     <p>If the sync process is stuck in the <em>Running</em> state (i.e. it's taking longer than usual) and the sync log is not updating, it probably means that an error occurred during the sync but the process didn't catch it and therefore didn't set the sync as "Failed" (even if the process has been aborted). Check the sync log (if enabled) and any Typesense error logs in the <em>/logs</em> folder of the Zen Cart catalog.<br>To retry the sync, manually trigger a new job by clicking the <em>Force Full-Sync</em> button in the Typesense Dashboard (note that the job won't start immediately, but only with the next scheduled cron run).</p>
+                    <p>If the <em>Collections</em> tab of the Typesense Dashboard always stays red and says <em>No Collections Found</em>, and the Full-Sync never completes, check if there's a <span class="font-monospace">myDEBUG-adm</span> log with the following error:</p>
+                    <p><span class="font-monospace">PHP Fatal error:  Maximum execution time of 60 seconds exceeded</span></p>
+                    <p>If so, increase the <em>Configuration > My Store > Admin Set max_execution_time for processes</em> setting from 60 seconds to 600 seconds or similar (high enough for Full-Sync to complete).</p>
                 </section>
 
                 <section>
