@@ -162,14 +162,7 @@ class TypesenseZencart
                 $result->fields['minutes_since_last_start'] > TYPESENSE_SYNC_TIMEOUT_MINUTES
             ) {
                 $this->writeSyncLog('Last sync is still running, but has been running for more than ' . TYPESENSE_SYNC_TIMEOUT_MINUTES . ' minutes. Aborting.');
-                $sql = "
-                    UPDATE
-                        " . TABLE_TYPESENSE_SYNC . "
-                    SET
-                        status = 'failed'
-                    WHERE
-                        id = 1
-                ";
+                $this->setSyncFailed();
                 $db->Execute($sql);
                 $result->fields['status'] = 'failed';
             } else {
@@ -182,6 +175,8 @@ class TypesenseZencart
             $this->writeSyncLog('Last sync has failed, and sync-after-failed is disabled. Exiting.');
             return;
         }
+
+        set_error_handler([$this, 'handleSyncFatalError']);
 
         if (
             $result->fields['is_next_run_full'] === '1' ||
@@ -351,15 +346,7 @@ class TypesenseZencart
             $this->writeSyncLog('ERROR: ' . $e->getMessage());
             $this->writeSyncLog('--- Full-sync failed ---');
 
-            $sql = "
-                UPDATE
-                    " . TABLE_TYPESENSE_SYNC . "
-                SET
-                    status = 'failed'
-                WHERE
-                    id = 1
-            ";
-            $db->Execute($sql);
+            $this->setSyncFailed();
 
             throw $e;
         }
@@ -417,15 +404,7 @@ class TypesenseZencart
             $this->writeSyncLog('ERROR: ' . $e->getMessage());
             $this->writeSyncLog('--- Incremental-sync failed ---');
 
-            $sql = "
-                UPDATE
-                    " . TABLE_TYPESENSE_SYNC . "
-                SET
-                    status = 'failed'
-                WHERE
-                    id = 1
-            ";
-            $db->Execute($sql);
+            $this->setSyncFailed();
 
             throw $e;
         }
@@ -444,6 +423,35 @@ class TypesenseZencart
         $db->Execute($sql);
 
         $this->writeSyncLog('--- Incremental-sync completed ---');
+    }
+
+    public function handleSyncFatalError($errno, $errstr, $errfile, $errline)
+    {
+        $this->writeSyncLog("FATAL ERROR: check the Zen Cart error logs");
+        $this->writeSyncLog('--- Sync failed ---');
+        $this->setSyncFailed();
+
+        return zen_debug_error_handler($errno, $errstr, $errfile, $errline);
+    }
+
+    /**
+     * Sets the sync as failed.
+     *
+     * @return void
+     */
+    protected function setSyncFailed(): void
+    {
+        global $db;
+
+        $sql = "
+            UPDATE
+                " . TABLE_TYPESENSE_SYNC . "
+            SET
+                status = 'failed'
+            WHERE
+                id = 1
+        ";
+        $db->Execute($sql);
     }
 
     /**
