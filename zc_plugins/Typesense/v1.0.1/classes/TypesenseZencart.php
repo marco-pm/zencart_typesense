@@ -624,6 +624,25 @@ class TypesenseZencart
             ";
             $db->Execute($sql);
         } else {
+
+            // Check if there are products that have been disabled since last sync, and in that case add them to
+            // the list of products to be removed from the collection
+            $sql = "
+                SELECT
+                    p.products_id
+                FROM
+                    " . TABLE_PRODUCTS . " p
+                WHERE
+                    p.products_status = 0
+                    AND p.products_last_modified >= :lastSyncStartTime
+            ";
+            $sql = $db->bindVars($sql, ':lastSyncStartTime', $lastSyncStartTime, 'date');
+            $disabledProducts = $db->Execute($sql);
+            foreach ($disabledProducts as $disabledProduct) {
+                self::addProductsIdToBeDeleted((int)$disabledProduct['products_id']);
+            }
+
+            // Remove products from the collection
             $sql = "
                 SELECT
                     products_ids_to_delete
