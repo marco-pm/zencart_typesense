@@ -1,9 +1,9 @@
 <?php
 /**
- * @package  Instant Search Plugin for Zen Cart
+ * @package  Typesense Plugin for Zen Cart
  * @author   marco-pm
- * @version  4.0.0
- * @see      https://github.com/marco-pm/zencart_instantsearch
+ * @version  1.0.2
+ * @see      https://github.com/marco-pm/zencart_typesense
  * @license  GNU Public License V2.0
  */
 

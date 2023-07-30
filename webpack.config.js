@@ -5,7 +5,7 @@ module.exports = [
         name: 'typesense_dashboard',
         entry: path.resolve(__dirname, './src/typesense_dashboard.tsx'),
         output: {
-            path: path.resolve(__dirname, './zc_plugins/Typesense/v1.0.1/admin/'),
+            path: path.resolve(__dirname, './zc_plugins/Typesense/v1.0.2/admin/'),
             filename: 'typesense_dashboard.min.js',
         },
         module: {
